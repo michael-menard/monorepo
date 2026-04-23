@@ -18,6 +18,7 @@ export default defineConfig({
   server: {
     port: readPort('PORT_MONITOR_PORT'),
     host: true,
+    allowedHosts: true,
     proxy: {
       '/api/v1': {
         target: `http://localhost:${readPort('ROADMAP_SVC_PORT')}`,

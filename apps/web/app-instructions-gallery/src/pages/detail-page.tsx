@@ -36,6 +36,19 @@ interface MocFile {
   mimeType: string | null
 }
 
+interface SourceSet {
+  setNumber: string
+  set: {
+    id: string
+    title: string
+    setNumber: string | null
+    imageUrl: string | null
+    pieceCount: number | null
+    year: number | null
+    theme: string | null
+  } | null
+}
+
 export interface DetailPageProps {
   /** The instruction data to display */
   instruction: Instruction | null
@@ -55,6 +68,8 @@ export interface DetailPageProps {
   className?: string
   /** Files available for download (INST-1107) */
   files?: MocFile[]
+  /** LEGO sets this MOC is built from */
+  sourceSets?: SourceSet[]
 }
 
 /**
@@ -164,6 +179,7 @@ export function DetailPage({
   onFavorite,
   className,
   files,
+  sourceSets,
 }: DetailPageProps) {
   // Prepare images for lightbox
   const lightboxImages: LightboxImage[] = useMemo(() => {
@@ -413,6 +429,49 @@ export function DetailPage({
           </Card>
         </div>
       </div>
+
+      {/* Built From Sets */}
+      {sourceSets && sourceSets.length > 0 ? (
+        <Card className="mt-6" data-testid="source-sets-card">
+          <CardHeader>
+            <CardTitle>Built From</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {sourceSets.map(ss => (
+                <div
+                  key={ss.setNumber}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-muted/50"
+                  data-testid={`source-set-${ss.setNumber}`}
+                >
+                  {ss.set?.imageUrl ? (
+                    <img
+                      src={ss.set.imageUrl}
+                      alt={ss.set.title}
+                      className="w-full aspect-square object-contain rounded"
+                    />
+                  ) : (
+                    <div className="w-full aspect-square bg-muted rounded flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground">No image</span>
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-sm font-medium truncate w-full">
+                      {ss.set?.title || ss.setNumber}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{ss.setNumber}</p>
+                    {ss.set?.pieceCount ? (
+                      <p className="text-xs text-muted-foreground">
+                        {ss.set.pieceCount.toLocaleString()} pieces
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Lightbox */}
       <GalleryLightbox

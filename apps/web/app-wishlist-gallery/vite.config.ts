@@ -25,6 +25,7 @@ export default defineConfig({
   server: {
     port: readPort('WISHLIST_GALLERY_PORT'),
     host: true,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',

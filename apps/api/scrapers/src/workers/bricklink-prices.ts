@@ -5,15 +5,16 @@
  * Rate-limited to 15 jobs/hour via BullMQ worker limiter.
  */
 
-import { chromium, type BrowserContext, type Page } from 'playwright'
-import { resolve, dirname, join } from 'path'
-import { fileURLToPath } from 'url'
-import { unlinkSync } from 'fs'
 import { logger } from '@repo/logger'
 import type { BricklinkPricesJob } from '../queues.js'
+import {
+  getSharedPage,
+  resetPage,
+  shutdownBrowser as shutdownPricesBrowser,
+  waitForAgeGate,
+  checkRateLimited,
+} from './shared-browser.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const CHROME_PROFILE = resolve(__dirname, '../../../scrapers/bricklink-minifigs/.chrome-profile')
 const API_BASE = process.env.LEGO_API_URL || 'http://localhost:9100'
 
 /** Random delay between 5-8 seconds */
@@ -21,30 +22,7 @@ function randomDelay(): number {
   return Math.floor(Math.random() * 3001) + 5000
 }
 
-let sharedContext: BrowserContext | null = null
-
-async function getContext(): Promise<BrowserContext> {
-  if (!sharedContext) {
-    try {
-      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
-    } catch {
-      // Lock doesn't exist — fine
-    }
-    sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
-      headless: false,
-      channel: 'chrome',
-      args: ['--disable-blink-features=AutomationControlled'],
-    })
-  }
-  return sharedContext
-}
-
-export async function shutdownPricesBrowser(): Promise<void> {
-  if (sharedContext) {
-    await sharedContext.close().catch(() => {})
-    sharedContext = null
-  }
-}
+export { shutdownPricesBrowser }
 
 interface PriceGuideStats {
   timesSold: number
@@ -91,28 +69,38 @@ export interface PriceResult {
 
 export async function processBricklinkPrices(job: BricklinkPricesJob): Promise<PriceResult> {
   const { itemNumber, itemType, variantId } = job
-  const context = await getContext()
-  const page = await context.newPage()
+  const page = await getSharedPage()
 
   try {
     const url = `https://www.bricklink.com/v2/catalog/catalogitem.page?${itemType}=${itemNumber}#T=P`
     logger.info(`[bricklink-prices] Scraping price guide for ${itemType}=${itemNumber}`)
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    // Navigate with retry — BrickLink sometimes aborts on redirects (age gate, login, etc.)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+        break
+      } catch (navError) {
+        const navMsg = navError instanceof Error ? navError.message : String(navError)
+        if (attempt === 0 && navMsg.includes('ERR_ABORTED')) {
+          logger.warn(`[bricklink-prices] Navigation aborted for ${itemNumber}, retrying...`)
+          await page.waitForTimeout(3000)
+          continue
+        }
+        throw navError
+      }
+    }
+
+    await waitForAgeGate(page)
     await page.waitForTimeout(randomDelay())
 
     // Check for rate limiting
-    const bodyText = await page.evaluate(() => document.body?.innerText || '').catch(() => '')
-    if (
-      bodyText.toLowerCase().includes('rate limit') ||
-      bodyText.toLowerCase().includes('too many requests') ||
-      bodyText.toLowerCase().includes('access denied')
-    ) {
-      const resetMatch = bodyText.match(/try again in (\d+)\s*(minutes?|hours?)/i)
+    const rateCheck = await checkRateLimited(page)
+    if (rateCheck.rateLimited) {
       return {
         success: false,
         rateLimited: true,
-        resetHint: resetMatch ? `${resetMatch[1]} ${resetMatch[2]}` : undefined,
+        resetHint: rateCheck.resetHint,
         itemNumber,
       }
     }
@@ -207,6 +195,6 @@ export async function processBricklinkPrices(job: BricklinkPricesJob): Promise<P
     logger.error(`[bricklink-prices] Failed ${itemNumber}`, { error: msg })
     return { success: false, error: msg, itemNumber }
   } finally {
-    await page.close()
+    await resetPage()
   }
 }

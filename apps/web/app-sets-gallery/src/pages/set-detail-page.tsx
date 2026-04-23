@@ -26,6 +26,7 @@ import {
   useGetSetByIdQuery,
   useUpdateSetMutation,
   useCreateSetInstanceMutation,
+  useGetBuildableMocsQuery,
 } from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
 import { InstancesTable } from '../components/InstancesTable'
@@ -405,6 +406,9 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   const setId = id ?? ''
 
   const { data: set, isLoading, isError, error } = useGetSetByIdQuery(setId, { skip: !setId })
+  const { data: buildableMocsData } = useGetBuildableMocsQuery(setId, {
+    skip: !setId || isLoading || isError,
+  })
 
   const [updateSet] = useUpdateSetMutation()
   const [createInstance] = useCreateSetInstanceMutation()
@@ -638,6 +642,35 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
         <h2 className="text-lg font-semibold mb-3">Minifigs</h2>
         <MinifigsGrid minifigs={set.minifigs} />
       </section>
+
+      {/* ================================================================= */}
+      {/* SECTION 4b: Buildable MOCs                                         */}
+      {/* ================================================================= */}
+      {buildableMocsData && buildableMocsData.buildableMocs.length > 0 ? (
+        <section data-testid="set-detail-buildable-mocs-section">
+          <h2 className="text-lg font-semibold mb-3">MOCs You Can Build</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {buildableMocsData.buildableMocs.map(item => (
+              <div
+                key={item.mocNumber}
+                className="border rounded-lg p-3 flex flex-col items-center gap-2 text-center"
+                data-testid={`buildable-moc-${item.mocNumber}`}
+              >
+                <div className="h-20 w-20 bg-muted rounded flex items-center justify-center">
+                  <span className="text-muted-foreground text-xs">MOC</span>
+                </div>
+                <p className="text-xs font-medium leading-tight line-clamp-2">
+                  {item.moc?.title || item.mocNumber}
+                </p>
+                <span className="text-xs text-muted-foreground font-mono">{item.mocNumber}</span>
+                {item.moc?.author ? (
+                  <span className="text-xs text-muted-foreground">by {item.moc.author}</span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* ================================================================= */}
       {/* SECTION 5: Notes                                                   */}

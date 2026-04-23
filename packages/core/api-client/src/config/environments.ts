@@ -35,11 +35,15 @@ export function getServerlessApiConfig(): ServerlessApiConfig {
     )
   }
 
-  // Validate URL format
-  try {
-    new URL(baseUrl)
-  } catch {
-    throw new Error(`Invalid VITE_SERVERLESS_API_BASE_URL: "${baseUrl}". Must be a valid URL.`)
+  // Validate URL format (allow relative paths like '/api' for proxy setups)
+  if (!baseUrl.startsWith('/')) {
+    try {
+      new URL(baseUrl)
+    } catch {
+      throw new Error(
+        `Invalid VITE_SERVERLESS_API_BASE_URL: "${baseUrl}". Must be a valid URL or relative path.`,
+      )
+    }
   }
 
   return {

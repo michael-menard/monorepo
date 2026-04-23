@@ -24,6 +24,7 @@ export default defineConfig({
   server: {
     port: readPort('USER_SETTINGS_PORT'),
     host: true,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',

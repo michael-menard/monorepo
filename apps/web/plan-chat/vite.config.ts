@@ -19,6 +19,7 @@ export default defineConfig({
   server: {
     port: readPort('PLAN_CHAT_PORT'),
     host: true,
+    allowedHosts: true,
     proxy: {
       '/api/chat': {
         target: `http://localhost:${readPort('LEGO_API_PORT')}`,

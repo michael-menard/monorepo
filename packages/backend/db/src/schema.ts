@@ -598,6 +598,30 @@ export const mocParts = pgTable(
   }),
 )
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MOC Source Sets — many-to-many join linking MOCs to the LEGO sets they are built from
+// Uses text keys (not FKs) because MOC data lives in a separate scraper DB.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const mocSourceSets = pgTable(
+  'moc_source_sets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mocNumber: text('moc_number').notNull(),
+    setNumber: text('set_number').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  table => ({
+    mocNumberIdx: index('moc_source_sets_moc_number_idx').on(table.mocNumber),
+    setNumberIdx: index('moc_source_sets_set_number_idx').on(table.setNumber),
+    uniqueMocSet: uniqueIndex('moc_source_sets_moc_number_set_number_key').on(
+      table.mocNumber,
+      table.setNumber,
+    ),
+  }),
+)
+
 // Define relationships for lazy loading
 export const galleryImagesRelations = relations(galleryImages, ({ one, many }) => ({
   album: one(galleryAlbums, {

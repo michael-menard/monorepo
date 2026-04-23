@@ -12,6 +12,7 @@ import {
   instructionParts as instructionPartsTable,
 } from '../db/schema.js'
 import * as gallerySchema from '../../../../../packages/backend/db/src/schema.js'
+import { mocSourceSets } from '../../../../../packages/backend/db/src/schema.js'
 import {
   writeToGallery,
   writeImagesToGallery,
@@ -437,6 +438,23 @@ export async function runSingle(
       await checkpoint.save(mocNumber, 'completed')
     } else {
       logger.warn(`[single] No files downloaded for MOC-${mocNumber}`)
+    }
+
+    // Write source sets (MOC → LEGO set relationships) to main DB
+    if (detail.sourceSets.length > 0 && !options.dryRun) {
+      logger.info(`[single] MOC-${mocNumber}: linking ${detail.sourceSets.length} source set(s)`)
+      for (const sourceSet of detail.sourceSets) {
+        await (galleryDb as any)
+          .insert(mocSourceSets)
+          .values({
+            mocNumber: `MOC-${mocNumber}`,
+            setNumber: sourceSet.setNumber,
+          })
+          .onConflictDoNothing()
+      }
+      logger.info(
+        `[single] MOC-${mocNumber}: source sets linked: ${detail.sourceSets.map(s => s.setNumber).join(', ')}`,
+      )
     }
 
     // Scrape parts from inventory tab

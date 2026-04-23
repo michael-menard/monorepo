@@ -69,8 +69,13 @@ app.use(
   '*',
   cors({
     origin: origin => {
-      // Allow requests from localhost (development)
-      if (!origin || origin.startsWith('http://localhost:')) {
+      // Allow requests from localhost and Tailscale (development)
+      if (
+        !origin ||
+        origin.startsWith('http://localhost:') ||
+        origin.endsWith('.ts.net') ||
+        origin.endsWith('.tail-scale.ts.net')
+      ) {
         return origin || 'http://localhost:3000'
       }
       // In production, return a specific allowed origin

@@ -115,6 +115,12 @@ export const QueueHealthSchema = z.object({
     resumesAt: z.string().nullable(),
     reason: z.string().nullable(),
   }),
+  rateLimiter: z
+    .object({
+      isLimited: z.boolean(),
+      resetsInSeconds: z.number().nullable(),
+    })
+    .optional(),
 })
 
 export type QueueHealth = z.infer<typeof QueueHealthSchema>

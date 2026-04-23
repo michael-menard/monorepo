@@ -36,4 +36,5 @@ export const {
   activityEvents,
   buildProjects,
   buildProjectParts,
+  mocSourceSets,
 } = schema

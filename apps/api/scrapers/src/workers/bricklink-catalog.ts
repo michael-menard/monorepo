@@ -5,47 +5,21 @@
  * Enqueues each discovered item as a child bricklink-minifig job.
  */
 
-import { chromium, type BrowserContext, type Page } from 'playwright'
-import { resolve, dirname, join } from 'path'
-import { fileURLToPath } from 'url'
-import { unlinkSync } from 'fs'
 import { Queue } from 'bullmq'
 import { logger } from '@repo/logger'
 import type { BricklinkCatalogJob, BricklinkMinifigJob } from '../queues.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const CHROME_PROFILE = resolve(__dirname, '../../../scrapers/bricklink-minifigs/.chrome-profile')
+import {
+  getSharedPage,
+  resetPage,
+  shutdownBrowser as shutdownCatalogBrowser,
+} from './shared-browser.js'
 
 /** Random delay between 5-8 seconds */
 function randomDelay(): number {
   return Math.floor(Math.random() * 3001) + 5000
 }
 
-let sharedContext: BrowserContext | null = null
-
-async function getContext(): Promise<BrowserContext> {
-  if (!sharedContext) {
-    // Remove stale lock from previous crashed Chrome instance
-    try {
-      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
-    } catch {
-      // Lock doesn't exist — fine
-    }
-    sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
-      headless: false,
-      channel: 'chrome',
-      args: ['--disable-blink-features=AutomationControlled'],
-    })
-  }
-  return sharedContext
-}
-
-export async function shutdownCatalogBrowser(): Promise<void> {
-  if (sharedContext) {
-    await sharedContext.close().catch(() => {})
-    sharedContext = null
-  }
-}
+export { shutdownCatalogBrowser }
 
 export interface CatalogResult {
   success: boolean
@@ -62,8 +36,7 @@ export async function processBricklinkCatalog(
   parentJobId: string,
 ): Promise<CatalogResult> {
   const { catalogUrl, wishlist } = job
-  const context = await getContext()
-  const page = await context.newPage()
+  const page = await getSharedPage()
 
   try {
     const allItems: Array<{ itemNumber: string; itemType: 'M' | 'S'; name: string }> = []
@@ -180,7 +153,7 @@ export async function processBricklinkCatalog(
           wishlist,
           parentJobId,
         },
-        { jobId: `${parentJobId}:${item.itemNumber}` },
+        { jobId: `${parentJobId}-${item.itemNumber}` },
       )
       enqueued++
     }
@@ -197,6 +170,6 @@ export async function processBricklinkCatalog(
     logger.error('[bricklink-catalog] Failed', { error: msg, catalogUrl })
     return { success: false, error: msg, itemsFound: 0, jobsEnqueued: 0 }
   } finally {
-    await page.close()
+    await resetPage()
   }
 }

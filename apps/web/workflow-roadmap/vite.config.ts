@@ -25,6 +25,7 @@ export default defineConfig({
       ? parseInt(process.env.WORKFLOW_ROADMAP_PORT)
       : readPort('WORKFLOW_ROADMAP_PORT'),
     host: true,
+    allowedHosts: true,
     proxy: {
       // SSE endpoint — must come before the generic /api catch-all.
       // Disables http-proxy's response timeout so the stream stays open indefinitely.

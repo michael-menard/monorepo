@@ -4,8 +4,8 @@ import { fileURLToPath } from 'url'
 import { logger } from '@repo/logger'
 import { BasePage } from './base-page.js'
 import { humanWait } from '../scraper/human-behavior.js'
-import { ScrapedPartSchema, ScrapedMocDetailSchema } from '../__types__/index.js'
-import type { ScrapedMocDetail, ScrapedPart } from '../__types__/index.js'
+import { ScrapedPartSchema, ScrapedMocDetailSchema, SourceSetSchema } from '../__types__/index.js'
+import type { ScrapedMocDetail, ScrapedPart, SourceSet } from '../__types__/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DOWNLOAD_DIR = resolve(__dirname, '../../data/downloads')
@@ -180,6 +180,9 @@ export class MocDetailPage extends BasePage {
       // Scrape tags
       const tags = await this.scrapeTags()
 
+      // Scrape "Alternate Build of" source sets
+      const sourceSets = await this.scrapeSourceSets()
+
       const detail = ScrapedMocDetailSchema.parse({
         mocNumber,
         title,
@@ -192,6 +195,7 @@ export class MocDetailPage extends BasePage {
         dateAdded,
         authorProfileUrl,
         tags,
+        sourceSets,
       })
 
       logger.info(
@@ -200,6 +204,70 @@ export class MocDetailPage extends BasePage {
 
       return detail
     })
+  }
+
+  /**
+   * Scrape "Alternate Build of the following" source sets from the Details tab.
+   * These are LEGO sets that the MOC is built from, shown as thumbnail cards
+   * with links to rebrickable.com/sets/{set_number}/...
+   */
+  async scrapeSourceSets(): Promise<SourceSet[]> {
+    try {
+      const sets = await this.page.evaluate(() => {
+        const results: Array<{ setNumber: string; name: string; url: string }> = []
+
+        // Find the "Alternate Build of the following" text
+        const pane =
+          document.querySelector('#details') ||
+          document.querySelector('.tab-pane.active') ||
+          document.querySelector('.tab-pane:first-child')
+
+        if (!pane) return results
+
+        const bodyText = pane.textContent || ''
+        if (
+          !bodyText.includes('Alternate Build') &&
+          !bodyText.includes('alternate build') &&
+          !bodyText.includes('Can Build From')
+        ) {
+          return results
+        }
+
+        // Find all links to sets pages within the details pane
+        const setLinks = pane.querySelectorAll('a[href*="/sets/"]')
+
+        for (const link of setLinks) {
+          const href = (link as HTMLAnchorElement).href || link.getAttribute('href') || ''
+          const name = (link.textContent || '').trim()
+
+          // Extract set number from URL: /sets/76342-1/... or /sets/10305-1/...
+          const match = href.match(/\/sets\/(\d+-\d+)/)
+          if (!match) continue
+
+          const setNumber = match[1]
+          if (results.some(r => r.setNumber === setNumber)) continue
+
+          results.push({
+            setNumber,
+            name,
+            url: href.startsWith('http') ? href : `https://rebrickable.com${href}`,
+          })
+        }
+
+        return results
+      })
+
+      if (sets.length > 0) {
+        logger.info(
+          `[moc-detail] Found ${sets.length} source set(s): ${sets.map(s => s.setNumber).join(', ')}`,
+        )
+      }
+
+      return sets.map(s => SourceSetSchema.parse(s))
+    } catch (e) {
+      logger.warn('[moc-detail] Failed to scrape source sets', { error: e })
+      return []
+    }
   }
 
   /**

@@ -25,6 +25,7 @@ export default defineConfig({
   server: {
     port: readPort('APP_DASHBOARD_PORT'),
     host: true,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',

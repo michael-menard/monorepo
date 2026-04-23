@@ -14,13 +14,10 @@ import { logger } from '@repo/logger'
 import { createQueues, QUEUE_NAMES } from './queues.js'
 import { CircuitBreaker } from './circuit-breaker.js'
 import { scraperEvents } from './events.js'
-import {
-  processBricklinkMinifig,
-  shutdownBrowser,
-  type ScrapeResult,
-} from './workers/bricklink-minifig.js'
-import { processBricklinkCatalog, shutdownCatalogBrowser } from './workers/bricklink-catalog.js'
-import { processBricklinkPrices, shutdownPricesBrowser } from './workers/bricklink-prices.js'
+import { processBricklinkMinifig, type ScrapeResult } from './workers/bricklink-minifig.js'
+import { processBricklinkCatalog } from './workers/bricklink-catalog.js'
+import { processBricklinkPrices } from './workers/bricklink-prices.js'
+import { shutdownBrowser } from './workers/shared-browser.js'
 import { processLegoSet } from './workers/lego-set.js'
 import { processRebrickableSet } from './workers/rebrickable-set.js'
 import { processRebrickableMocs } from './workers/rebrickable-mocs.js'
@@ -115,7 +112,11 @@ function createWorkers() {
 
       return result
     },
-    { connection: redisConnection, concurrency: 1 },
+    {
+      connection: redisConnection,
+      concurrency: 1,
+      limiter: { max: 20, duration: 60 * 60 * 1000 }, // 20 per hour
+    },
   )
   workers.push(bricklinkMinifigWorker)
 
@@ -133,7 +134,11 @@ function createWorkers() {
       if (!result.success) throw new Error(result.error || 'Catalog scrape failed')
       return result
     },
-    { connection: redisConnection, concurrency: 1 },
+    {
+      connection: redisConnection,
+      concurrency: 1,
+      limiter: { max: 20, duration: 60 * 60 * 1000 }, // 20 per hour
+    },
   )
   workers.push(bricklinkCatalogWorker)
 
@@ -184,7 +189,11 @@ function createWorkers() {
       if (!result.success) throw new Error(result.error || 'Scrape failed')
       return result
     },
-    { connection: redisConnection, concurrency: 1 },
+    {
+      connection: redisConnection,
+      concurrency: 1,
+      limiter: { max: 20, duration: 60 * 60 * 1000 }, // 20 per hour
+    },
   )
   workers.push(rebrickableSetWorker)
 
@@ -293,10 +302,8 @@ async function shutdown(signal: string) {
   // Close workers (waits for current job to finish)
   await Promise.all(workers.map(w => w.close()))
 
-  // Close browsers
+  // Close shared browser (single instance for all BrickLink workers)
   await shutdownBrowser()
-  await shutdownCatalogBrowser()
-  await shutdownPricesBrowser()
 
   // Close circuit breaker timers
   circuitBreaker.destroy()

@@ -17,6 +17,7 @@ export default defineConfig({
   server: {
     port: readPort('RESET_PASSWORD_PORT'),
     host: true,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',

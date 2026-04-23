@@ -1294,4 +1294,65 @@ mocs.patch('/:id/want-to-build', async c => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────────────────
+// GET /mocs/:id/source-sets — LEGO sets this MOC is built from
+// ─────────────────────────────────────────────────────────────────────────
+
+mocs.get('/:id/source-sets', async c => {
+  const userId = c.get('userId')
+  const mocId = c.req.param('id')
+
+  try {
+    // Get the MOC to find its mocId (external MOC number like "MOC-253417")
+    const [moc] = await db
+      .select({ mocId: schema.mocInstructions.mocId })
+      .from(schema.mocInstructions)
+      .where(and(eq(schema.mocInstructions.id, mocId), eq(schema.mocInstructions.userId, userId)))
+      .limit(1)
+
+    if (!moc?.mocId) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    // Find linked sets via moc_source_sets join table
+    const sourceSets = await db
+      .select({
+        id: schema.mocSourceSets.id,
+        setNumber: schema.mocSourceSets.setNumber,
+        createdAt: schema.mocSourceSets.createdAt,
+      })
+      .from(schema.mocSourceSets)
+      .where(eq(schema.mocSourceSets.mocNumber, moc.mocId))
+
+    // Enrich with set data from the sets table where available
+    const enriched = await Promise.all(
+      sourceSets.map(async ss => {
+        const [set] = await db
+          .select({
+            id: schema.sets.id,
+            title: schema.sets.title,
+            setNumber: schema.sets.setNumber,
+            imageUrl: schema.sets.imageUrl,
+            pieceCount: schema.sets.pieceCount,
+            year: schema.sets.year,
+            theme: schema.sets.theme,
+          })
+          .from(schema.sets)
+          .where(eq(schema.sets.setNumber, ss.setNumber))
+          .limit(1)
+
+        return {
+          setNumber: ss.setNumber,
+          set: set || null,
+        }
+      }),
+    )
+
+    return c.json({ sourceSets: enriched })
+  } catch (error) {
+    logger.error('Failed to get source sets', error, { userId, mocId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
+})
+
 export default mocs

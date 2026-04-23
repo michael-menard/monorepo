@@ -1,10 +1,14 @@
 import { resolve } from 'path'
 import { createRequire } from 'module'
+import { config as loadEnv } from 'dotenv'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 
 const require = createRequire(import.meta.url)
 const { readPort } = require('../../../infra/ports.cjs')
+
+// Load .env.local so VITE_S3_ENDPOINT and VITE_LEGO_API_HOST are available to proxy config
+loadEnv({ path: resolve(__dirname, '.env.local') })
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,13 +30,46 @@ export default defineConfig({
       ? parseInt(process.env.MAIN_APP_PORT)
       : readPort('MAIN_APP_PORT'),
     host: true,
+    allowedHosts: true,
     proxy: {
       // Proxy all /api/* requests to the backend server
       // Strips the /api prefix: /api/wishlist -> /wishlist
+      // Rewrites localhost:9000 URLs in JSON responses to /s3/ for Tailscale compatibility
       '/api': {
-        target: `http://localhost:${process.env.LEGO_API_PORT ?? readPort('LEGO_API_PORT')}`,
+        target: `${process.env.VITE_LEGO_API_HOST || 'http://localhost'}:${process.env.VITE_LEGO_API_PORT || process.env.LEGO_API_PORT || readPort('LEGO_API_PORT')}`,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
+        selfHandleResponse: true,
+        configure: proxy => {
+          proxy.on('proxyRes', (proxyRes, _req, res) => {
+            const contentType = proxyRes.headers['content-type'] || ''
+            // Pass through non-JSON responses as-is
+            if (!contentType.includes('application/json')) {
+              res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers)
+              proxyRes.pipe(res)
+              return
+            }
+            // Buffer JSON responses to rewrite MinIO URLs
+            const chunks: Buffer[] = []
+            proxyRes.on('data', (chunk: Buffer) => chunks.push(chunk))
+            proxyRes.on('end', () => {
+              let body = Buffer.concat(chunks).toString('utf-8')
+              const s3Endpoint = process.env.VITE_S3_ENDPOINT || 'http://localhost:9000'
+              body = body.replaceAll('http://localhost:9000/', `${s3Endpoint}/`)
+              const headers = { ...proxyRes.headers }
+              delete headers['content-length']
+              headers['content-length'] = String(Buffer.byteLength(body))
+              res.writeHead(proxyRes.statusCode ?? 200, headers)
+              res.end(body)
+            })
+          })
+        },
+      },
+      // Proxy MinIO/S3 requests for Tailscale compatibility
+      '/s3': {
+        target: process.env.VITE_S3_ENDPOINT || 'http://localhost:9000',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/s3/, ''),
       },
     },
   },

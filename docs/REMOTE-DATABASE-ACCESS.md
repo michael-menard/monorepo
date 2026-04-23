@@ -103,13 +103,16 @@ You need to change `localhost` to `mac-studio` in 6 files. Only the hostname cha
 
 Path: `/Users/michaelmenard/Development/monorepo/.env`
 
-Find and change these 3 lines:
+Find and change these 4 lines:
 
-| Find                                                                                | Change to                           |
-| ----------------------------------------------------------------------------------- | ----------------------------------- |
-| `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev`               | `...@mac-studio:5432/lego_dev`      |
-| `KB_DATABASE_URL=postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase` | `...@mac-studio:5433/knowledgebase` |
-| `KB_DB_HOST=localhost`                                                              | `KB_DB_HOST=mac-studio`             |
+| Find                                                                                | Change to                                              |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev`               | `...@mac-studio:5432/lego_dev`                         |
+| `KB_DATABASE_URL=postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase` | `...@mac-studio:5433/knowledgebase`                    |
+| `KB_DB_HOST=localhost`                                                              | `KB_DB_HOST=mac-studio`                                |
+| `S3_ENDPOINT=http://localhost:9000`                                                 | `S3_ENDPOINT=http://mac-studio.tail9eb57b.ts.net:9000` |
+
+> **The S3_ENDPOINT must use the full Tailscale domain name** (`mac-studio.tail9eb57b.ts.net`), not just `mac-studio`. The app uses Zod URL validation which rejects hostnames without a TLD. Without this change, MOC detail pages, instruction downloads, and gallery images will fail to load.
 
 ---
 
@@ -144,11 +147,14 @@ Find and change this 1 line:
 
 Path: `/Users/michaelmenard/Development/monorepo/apps/api/lego-api/.env.local`
 
-Find and change this 1 line:
+Find and change these 2 lines:
 
-| Find                                                                  | Change to                      |
-| --------------------------------------------------------------------- | ------------------------------ |
-| `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/monorepo` | `...@mac-studio:5432/monorepo` |
+| Find                                                                  | Change to                                              |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/monorepo` | `...@mac-studio:5432/monorepo`                         |
+| `S3_ENDPOINT=http://localhost:9000`                                   | `S3_ENDPOINT=http://mac-studio.tail9eb57b.ts.net:9000` |
+
+> **The S3_ENDPOINT here overrides the root .env** — this is what the lego-api actually reads. Must use the full Tailscale domain (`mac-studio.tail9eb57b.ts.net`) because Zod URL validation rejects hostnames without a TLD.
 
 ---
 
@@ -179,7 +185,7 @@ Find and change these 2 lines:
 
 ---
 
-**Total: 12 changes across 6 files.** In every case, you're just replacing `localhost` with `mac-studio`.
+**Total: 13 changes across 6 files.** In every case, you're just replacing `localhost` with `mac-studio`.
 
 #### Step 4: You're Done!
 

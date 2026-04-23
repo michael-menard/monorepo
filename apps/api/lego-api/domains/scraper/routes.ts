@@ -449,6 +449,12 @@ scraper.get('/queues', async c => {
       ? JSON.parse(cbRaw)
       : { isOpen: false, trippedAt: null, resumesAt: null, reason: null }
 
+    // Check BullMQ rate limiter state in Redis
+    // BullMQ stores rate limiter TTL at key: bull:<queueName>:limiter
+    const limiterTtl = await redis.pttl(`bull:${queueName}:limiter`)
+    const isRateLimited = (counts.waiting ?? 0) > 0 && (counts.active ?? 0) === 0 && limiterTtl > 0
+    const rateLimitResetsIn = limiterTtl > 0 ? Math.ceil(limiterTtl / 1000) : null
+
     // Update Prometheus gauges on every health poll
     scraperQueueDepth.set({ scraper_type: type, status: 'waiting' }, counts.waiting ?? 0)
     scraperQueueDepth.set({ scraper_type: type, status: 'active' }, counts.active ?? 0)
@@ -471,6 +477,10 @@ scraper.get('/queues', async c => {
         trippedAt: cb.trippedAt,
         resumesAt: cb.resumesAt,
         reason: cb.reason,
+      },
+      rateLimiter: {
+        isLimited: isRateLimited,
+        resetsInSeconds: rateLimitResetsIn,
       },
     })
   }

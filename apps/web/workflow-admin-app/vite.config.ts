@@ -26,6 +26,7 @@ export default defineConfig({
       ? parseInt(process.env.WORKFLOW_ADMIN_PORT)
       : readPort('WORKFLOW_ADMIN_PORT'),
     host: true,
+    allowedHosts: true,
     proxy: {
       // Roadmap service (plans, stories, dashboard)
       '/api/v1': {

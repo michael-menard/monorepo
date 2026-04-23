@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { eq } from 'drizzle-orm'
 import { auth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
 import { createSetsService } from './application/index.js'
@@ -578,6 +579,66 @@ sets.delete('/images/:imageId', async c => {
   }
 
   return c.body(null, 204)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// GET /sets/:id/buildable-mocs — MOCs that can be built from this set
+// ─────────────────────────────────────────────────────────────────────────
+
+sets.get('/:id/buildable-mocs', async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('id')
+
+  try {
+    // Get the set to find its set_number
+    const [set] = await db
+      .select({ setNumber: schema.sets.setNumber })
+      .from(schema.sets)
+      .where(eq(schema.sets.id, setId))
+      .limit(1)
+
+    if (!set?.setNumber) {
+      return c.json({ error: 'NOT_FOUND' }, 404)
+    }
+
+    // Find linked MOCs via moc_source_sets join table
+    const mocLinks = await db
+      .select({
+        mocNumber: schema.mocSourceSets.mocNumber,
+        createdAt: schema.mocSourceSets.createdAt,
+      })
+      .from(schema.mocSourceSets)
+      .where(eq(schema.mocSourceSets.setNumber, set.setNumber))
+
+    // Enrich with MOC data from moc_instructions where available
+    const enriched = await Promise.all(
+      mocLinks.map(async link => {
+        const [moc] = await db
+          .select({
+            id: schema.mocInstructions.id,
+            title: schema.mocInstructions.title,
+            mocId: schema.mocInstructions.mocId,
+            author: schema.mocInstructions.author,
+            partsCount: schema.mocInstructions.partsCount,
+            theme: schema.mocInstructions.theme,
+          })
+          .from(schema.mocInstructions)
+          .where(eq(schema.mocInstructions.mocId, link.mocNumber))
+          .limit(1)
+
+        return {
+          mocNumber: link.mocNumber,
+          moc: moc || null,
+        }
+      }),
+    )
+
+    return c.json({ buildableMocs: enriched })
+  } catch (error) {
+    const { logger } = await import('@repo/logger')
+    logger.error('Failed to get buildable MOCs', error, { userId, setId })
+    return c.json({ error: 'INTERNAL_ERROR' }, 500)
+  }
 })
 
 export default sets

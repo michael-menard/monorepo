@@ -1,6 +1,12 @@
 import { ThemeProvider, Toaster, TooltipProvider } from '@repo/app-component-library'
 import { Provider } from 'react-redux'
-import { BrowserRouter, Routes, Route, Outlet, Link, ScrollRestoration } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  Link,
+  ScrollRestoration,
+} from 'react-router-dom'
 import { Hexagon, GitBranch } from 'lucide-react'
 import { store } from './store'
 import { RoadmapPage } from './pages/RoadmapPage'
@@ -63,19 +69,22 @@ function RootLayout() {
   )
 }
 
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      { index: true, element: <RoadmapPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'plan/:slug', element: <PlanDetailsPage /> },
+      { path: 'story/:storyId', element: <StoryDetailsPage /> },
+    ],
+  },
+])
+
 export function App() {
   return (
     <Provider store={store}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<RootLayout />}>
-            <Route index element={<RoadmapPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="plan/:slug" element={<PlanDetailsPage />} />
-            <Route path="story/:storyId" element={<StoryDetailsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </Provider>
   )
 }

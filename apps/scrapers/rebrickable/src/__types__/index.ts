@@ -148,6 +148,14 @@ export const ScrapedPartSchema = z.object({
 
 export type ScrapedPart = z.infer<typeof ScrapedPartSchema>
 
+export const SourceSetSchema = z.object({
+  setNumber: z.string(),
+  name: z.string().default(''),
+  url: z.string().default(''),
+})
+
+export type SourceSet = z.infer<typeof SourceSetSchema>
+
 export const ScrapedMocDetailSchema = z.object({
   mocNumber: z.string(),
   title: z.string(),
@@ -161,6 +169,7 @@ export const ScrapedMocDetailSchema = z.object({
   dateAdded: z.string().optional(),
   authorProfileUrl: z.string().default(''),
   tags: z.array(z.string()).default([]),
+  sourceSets: z.array(SourceSetSchema).default([]),
 })
 
 export type ScrapedMocDetail = z.infer<typeof ScrapedMocDetailSchema>

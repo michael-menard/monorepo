@@ -6,16 +6,17 @@
  * Price guides are handled by the separate bricklink-prices queue.
  */
 
-import { resolve, dirname, join } from 'path'
-import { fileURLToPath } from 'url'
-import { unlinkSync } from 'fs'
-import { chromium, type BrowserContext, type Page } from 'playwright'
 import { initializeBucket, uploadToS3 } from '@repo/s3-client'
 import { logger } from '@repo/logger'
 import type { BricklinkMinifigJob } from '../queues.js'
+import {
+  getSharedPage,
+  resetPage,
+  shutdownBrowser,
+  waitForAgeGate,
+  checkRateLimited,
+} from './shared-browser.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const CHROME_PROFILE = resolve(__dirname, '../../../scrapers/bricklink-minifigs/.chrome-profile')
 const API_BASE = process.env.LEGO_API_URL || 'http://localhost:9100'
 const S3_BUCKET = process.env.S3_BUCKET || 'lego-moc-files'
 const S3_ENDPOINT = process.env.S3_ENDPOINT || 'http://localhost:9000'
@@ -30,70 +31,11 @@ export interface ScrapeResult {
   itemNumber: string
 }
 
-let sharedContext: BrowserContext | null = null
-let contextRefCount = 0
-
-/**
- * Get or create a shared browser context for BrickLink scraping.
- * Reuses the persistent Chrome profile from the CLI scraper.
- */
-async function getContext(): Promise<BrowserContext> {
-  if (!sharedContext) {
-    // Remove stale lock from previous crashed Chrome instance
-    try {
-      unlinkSync(join(CHROME_PROFILE, 'SingletonLock'))
-    } catch {
-      // Lock doesn't exist — fine
-    }
-    sharedContext = await chromium.launchPersistentContext(CHROME_PROFILE, {
-      headless: false,
-      channel: 'chrome',
-      args: ['--disable-blink-features=AutomationControlled'],
-    })
-  }
-  contextRefCount++
-  return sharedContext
-}
-
-async function releaseContext(): Promise<void> {
-  contextRefCount--
-  // Keep the context alive between jobs to avoid re-launching Chrome
-  // It will be cleaned up on shutdown
-}
-
-export async function shutdownBrowser(): Promise<void> {
-  if (sharedContext) {
-    await sharedContext.close().catch(() => {})
-    sharedContext = null
-    contextRefCount = 0
-  }
-}
+export { shutdownBrowser }
 
 /** Random delay between 5-8 seconds */
 function randomDelay(): number {
   return Math.floor(Math.random() * 3001) + 5000
-}
-
-/**
- * Check if the page shows a rate limit / Cloudflare challenge.
- */
-async function checkRateLimited(page: Page): Promise<{ rateLimited: boolean; resetHint?: string }> {
-  const bodyText = await page.evaluate(() => document.body?.innerText || '').catch(() => '')
-  const lowerText = bodyText.toLowerCase()
-
-  if (
-    lowerText.includes('rate limit') ||
-    lowerText.includes('too many requests') ||
-    lowerText.includes('access denied') ||
-    lowerText.includes('please verify you are a human')
-  ) {
-    // Try to parse reset hint
-    const resetMatch = bodyText.match(/try again in (\d+)\s*(minutes?|hours?)/i)
-    const resetHint = resetMatch ? `${resetMatch[1]} ${resetMatch[2]}` : undefined
-    return { rateLimited: true, resetHint }
-  }
-
-  return { rateLimited: false }
 }
 
 /**
@@ -103,8 +45,7 @@ async function checkRateLimited(page: Page): Promise<{ rateLimited: boolean; res
  */
 export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise<ScrapeResult> {
   const { itemNumber, itemType, wishlist } = job
-  const context = await getContext()
-  const page = await context.newPage()
+  const page = await getSharedPage()
 
   try {
     await initializeBucket(S3_BUCKET)
@@ -114,6 +55,7 @@ export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise
     logger.info(`[bricklink-minifig] Scraping ${itemType}=${itemNumber}`, { detailUrl })
 
     await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await waitForAgeGate(page)
     await page.waitForTimeout(randomDelay())
 
     // Check for rate limiting
@@ -269,7 +211,6 @@ export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise
     logger.error(`[bricklink-minifig] Failed ${itemNumber}`, { error: msg })
     return { success: false, error: msg, itemNumber }
   } finally {
-    await page.close()
-    await releaseContext()
+    await resetPage()
   }
 }

@@ -346,6 +346,28 @@ export const setsApi = createApi({
       providesTags: [{ type: 'Store' as const, id: 'LIST' }],
       ...getServerlessCacheConfig('long'),
     }),
+
+    /**
+     * GET /sets/:id/buildable-mocs - Get MOCs that can be built from this set
+     */
+    getBuildableMocs: builder.query<
+      {
+        buildableMocs: Array<{
+          mocNumber: string
+          moc: {
+            id: string
+            title: string
+            mocId: string | null
+            author: string | null
+            partsCount: number | null
+            theme: string | null
+          } | null
+        }>
+      },
+      string
+    >({
+      query: id => `/sets/${id}/buildable-mocs`,
+    }),
   }),
 })
 
@@ -368,4 +390,5 @@ export const {
   useCreateSetInstanceMutation,
   useUpdateSetInstanceMutation,
   useDeleteSetInstanceMutation,
+  useGetBuildableMocsQuery,
 } = setsApi

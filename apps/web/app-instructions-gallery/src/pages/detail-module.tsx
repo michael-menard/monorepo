@@ -1,5 +1,8 @@
 import { useCallback } from 'react'
-import { useGetInstructionByIdQuery } from '@repo/api-client/rtk/instructions-api'
+import {
+  useGetInstructionByIdQuery,
+  useGetSourceSetsQuery,
+} from '@repo/api-client/rtk/instructions-api'
 import type { Instruction } from '../__types__'
 import { DetailPage } from './detail-page'
 
@@ -19,6 +22,10 @@ export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
 
   const { data, isLoading, isError, error } = useGetInstructionByIdQuery(id, {
     skip: !id,
+  })
+
+  const { data: sourceSetData } = useGetSourceSetsQuery(id, {
+    skip: !id || isLoading || isError,
   })
 
   const handleBack = useCallback(() => {
@@ -59,5 +66,11 @@ export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
     isFavorite: data.isFeatured,
   }
 
-  return <DetailPage instruction={instruction} onBack={handleBack} />
+  return (
+    <DetailPage
+      instruction={instruction}
+      onBack={handleBack}
+      sourceSets={sourceSetData?.sourceSets}
+    />
+  )
 }

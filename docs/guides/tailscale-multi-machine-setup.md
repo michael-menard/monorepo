@@ -161,10 +161,115 @@ Edit `~/.claude/claude_desktop_config.json`. In the project entry for
 
 ---
 
+## Phase 3 — Web Apps & Dev Servers over Tailscale
+
+The primary Mac also runs the lego app and workflow roadmap. A startup script
+brings everything up so you can access it from the laptop browser.
+
+### 11. Start the remote dev environment
+
+On the primary Mac, before leaving:
+
+```bash
+./scripts/remote-dev-up.sh
+```
+
+This starts Docker infrastructure, then four dev servers:
+
+| Service       | URL                                      |
+| ------------- | ---------------------------------------- |
+| Lego App (UI) | http://mac-studio.tail9eb57b.ts.net:8000 |
+| Lego API      | http://mac-studio.tail9eb57b.ts.net:9100 |
+| Roadmap (UI)  | http://mac-studio.tail9eb57b.ts.net:8027 |
+| Roadmap API   | http://mac-studio.tail9eb57b.ts.net:9103 |
+
+To stop dev servers (Docker keeps running):
+
+```bash
+./scripts/remote-dev-up.sh --stop
+```
+
+### 12. Access from the laptop browser
+
+Open any of the URLs above. The Vite dev servers bind to all interfaces
+(`host: true`) and proxy API requests server-side to `localhost`, so everything
+works transparently over Tailscale.
+
+---
+
+## Phase 4 — Claude Code & OpenCode with KB Access
+
+The laptop runs the KB MCP server locally (via `tsx`), connecting to the KB
+database on the primary Mac over Tailscale. No HTTP server or auth needed —
+Tailscale is the security boundary.
+
+### 13. Configure Claude Code (`~/.claude.json`)
+
+In the `mcpServers` section for your project, update the `knowledge-base`
+entry to point at the Tailscale hostname:
+
+```json
+"knowledge-base": {
+  "type": "stdio",
+  "command": "/bin/sh",
+  "args": [
+    "-c",
+    "set -a && . /path/to/monorepo/apps/api/knowledge-base/.env.remote && set +a && exec npx tsx /path/to/monorepo/apps/api/knowledge-base/src/mcp-server/index.ts"
+  ]
+}
+```
+
+Create `.env.remote` in `apps/api/knowledge-base/` on the laptop:
+
+```env
+DATABASE_URL=postgresql://kbuser:TestPassword123!@mac-studio.tail9eb57b.ts.net:5433/knowledgebase
+EMBEDDING_PROVIDER=ollama
+LOG_LEVEL=info
+```
+
+> **Important**: Use port 5433 (PgBouncer), not 5435 (direct Postgres). The
+> MCP server doesn't need `LISTEN/NOTIFY`, and PgBouncer handles connection
+> pooling better over a network link.
+
+### 14. Configure OpenCode (`opencode.json`)
+
+Same approach — update the MCP command to source `.env.remote`:
+
+```json
+"knowledge-base": {
+  "type": "local",
+  "command": [
+    "/bin/sh",
+    "-c",
+    "set -a && . /path/to/monorepo/apps/api/knowledge-base/.env.remote && set +a && exec npx tsx /path/to/monorepo/apps/api/knowledge-base/src/mcp-server/index.ts"
+  ],
+  "enabled": true
+}
+```
+
+### 15. Verify KB connectivity
+
+```bash
+# From the laptop, test the database connection:
+docker run --rm postgres:16 psql \
+  postgresql://kbuser:TestPassword123!@mac-studio.tail9eb57b.ts.net:5433/knowledgebase \
+  -c 'SELECT count(*) FROM workflow.plans'
+
+# Or if psql is installed locally:
+psql postgresql://kbuser:TestPassword123!@mac-studio.tail9eb57b.ts.net:5433/knowledgebase \
+  -c 'SELECT count(*) FROM workflow.plans'
+```
+
+Then open Claude Code or OpenCode — KB tools (`kb_search`, `kb_get_plan`,
+etc.) should work normally.
+
+---
+
 ## Ongoing usage
 
-- **Start services**: Only on the primary Mac. Run the relevant Docker Compose
-  files before leaving.
+- **Start services**: Run `./scripts/remote-dev-up.sh` on the primary Mac
+  before leaving. It also runs `caffeinate` to prevent sleep.
 - **Secondary machines**: Just open Tailscale — no Docker needed.
 - **Tailscale reconnects automatically** after reboots on both machines.
 - **MagicDNS hostnames are stable** — they won't change between sessions.
+- **Stop dev servers**: `./scripts/remote-dev-up.sh --stop` (Docker keeps running).

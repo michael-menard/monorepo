@@ -684,6 +684,29 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
           },
         },
       ),
+
+      /**
+       * GET /mocs/:id/source-sets - Get LEGO sets this MOC is built from
+       */
+      getSourceSets: builder.query<
+        {
+          sourceSets: Array<{
+            setNumber: string
+            set: {
+              id: string
+              title: string
+              setNumber: string | null
+              imageUrl: string | null
+              pieceCount: number | null
+              year: number | null
+              theme: string | null
+            } | null
+          }>
+        },
+        string
+      >({
+        query: id => `/mocs/${id}/source-sets`,
+      }),
     }),
   })
 }
@@ -730,4 +753,6 @@ export const {
   useLazyGetScraperStatusQuery,
   // Legacy hooks
   useToggleInstructionFavoriteMutation,
+  // Source sets (MOC → LEGO set relationships)
+  useGetSourceSetsQuery,
 } = instructionsApi
