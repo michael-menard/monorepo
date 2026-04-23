@@ -138,10 +138,12 @@ function ActiveCardWrapper({ children }: { children: React.ReactNode }) {
 function JobCard({
   job,
   isDraggable,
+  activatorRef,
   dragListeners,
 }: {
   job: ScrapeJob
   isDraggable?: boolean
+  activatorRef?: (node: HTMLElement | null) => void
   dragListeners?: Record<string, unknown>
 }) {
   const [cancelJob, { isLoading: isCancelling }] = useCancelScrapeJobMutation()
@@ -159,10 +161,9 @@ function JobCard({
     >
       <div className="flex items-center gap-1.5">
         {isDraggable && (
-          <GripVertical
-            className="h-3 w-3 text-muted-foreground cursor-grab shrink-0"
-            {...dragListeners}
-          />
+          <span ref={activatorRef} className="flex shrink-0" {...dragListeners}>
+            <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
+          </span>
         )}
         {isActive && <Loader2 className="h-3 w-3 text-blue-500 animate-spin shrink-0" />}
         <span className="font-medium truncate flex-1">{getJobLabel(job)}</span>
@@ -181,7 +182,6 @@ function JobCard({
             variant="ghost"
             size="sm"
             className="h-6 px-1.5"
-            onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
             onClick={() => retryJob(job.id)}
             disabled={isRetrying}
           >
@@ -218,7 +218,15 @@ function JobCard({
 // ─────────────────────────────────────────────────────────────────────────
 
 function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: sortableId,
     data: { job },
   })
@@ -231,7 +239,7 @@ function SortableJobCard({ job, sortableId }: { job: ScrapeJob; sortableId: stri
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <JobCard job={job} isDraggable dragListeners={listeners} />
+      <JobCard job={job} isDraggable activatorRef={setActivatorNodeRef} dragListeners={listeners} />
     </div>
   )
 }
