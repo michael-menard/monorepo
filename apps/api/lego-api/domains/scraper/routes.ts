@@ -263,7 +263,7 @@ scraper.get('/jobs', async c => {
 
   const { status, type, limit } = query.success
     ? query.data
-    : { status: undefined, type: undefined, limit: 50 }
+    : { status: undefined, type: undefined, limit: 500 }
 
   const targetQueues = type
     ? [QUEUE_NAMES[type as ScraperType]].filter(Boolean)

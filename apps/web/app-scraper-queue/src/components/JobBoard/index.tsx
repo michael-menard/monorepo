@@ -41,7 +41,17 @@ import {
   Square,
   X,
 } from 'lucide-react'
-import { Badge, Button, cn } from '@repo/app-component-library'
+import { AlertTriangle, Clock, Hash, Info } from 'lucide-react'
+import {
+  AppDialog,
+  AppDialogContent,
+  AppDialogHeader,
+  AppDialogTitle,
+  AppDialogDescription,
+  Badge,
+  Button,
+  cn,
+} from '@repo/app-component-library'
 import {
   useGetScrapeJobsQuery,
   useGetQueueHealthQuery,
@@ -155,6 +165,8 @@ function JobCard({
   onRetry,
   isSelected,
   onToggleSelect,
+  onViewDetail,
+  isRetrying,
 }: {
   job: ScrapeJob
   isDraggable?: boolean
@@ -164,10 +176,16 @@ function JobCard({
   onRetry?: (id: string) => void
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
+  onViewDetail?: (job: ScrapeJob) => void
+  isRetrying?: boolean
 }) {
   const isActive = job.status === 'active'
   const elapsed = useElapsedTime(job.processedAt, isActive)
   const progressMsg = getProgressMessage(job.progress)
+  // Show error on card only when in failed lane (not when retrying in waiting lane)
+  const showError = job.failedReason && job.status === 'failed' && !isRetrying
+  // Show warning icon when card has a previous error but is not in the failed lane
+  const showPreviouslyFailed = job.failedReason && !showError
 
   const card = (
     <div
@@ -176,7 +194,7 @@ function JobCard({
         isActive ? 'bg-transparent' : 'bg-card border p-2',
         isSelected ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/20' : 'border-border',
       )}
-      onClick={() => onToggleSelect?.(job.id)}
+      onClick={() => onViewDetail?.(job)}
     >
       <div className="flex items-center gap-1.5">
         {isDraggable && (
@@ -190,7 +208,13 @@ function JobCard({
           </span>
         )}
         {onToggleSelect && (
-          <span className="shrink-0">
+          <span
+            className="shrink-0"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              onToggleSelect(job.id)
+            }}
+          >
             {isSelected ? (
               <CheckSquare className="h-3.5 w-3.5 text-blue-500" />
             ) : (
@@ -199,6 +223,7 @@ function JobCard({
           </span>
         )}
         {isActive && <Loader2 className="h-3 w-3 text-blue-500 animate-spin shrink-0" />}
+        {showPreviouslyFailed && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
         <span className="font-medium truncate flex-1">{getJobLabel(job)}</span>
         <span className="text-muted-foreground shrink-0">
           {isActive ? formatElapsed(elapsed) : formatTime(job.createdAt)}
@@ -207,7 +232,7 @@ function JobCard({
 
       {isActive && progressMsg && <p className="text-blue-600 truncate">{progressMsg}</p>}
 
-      {job.failedReason && <p className="text-red-500 truncate">{job.failedReason}</p>}
+      {showError && <p className="text-red-500 truncate">{job.failedReason}</p>}
 
       <div className="flex justify-end gap-1">
         {job.status === 'failed' && onRetry && (
@@ -244,6 +269,155 @@ function JobCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Job Detail Modal
+// ─────────────────────────────────────────────────────────────────────────
+
+const STATUS_LABEL: Record<string, { text: string; color: string }> = {
+  waiting: { text: 'Waiting', color: 'bg-yellow-100 text-yellow-800' },
+  delayed: { text: 'Delayed', color: 'bg-yellow-100 text-yellow-800' },
+  active: { text: 'Active', color: 'bg-blue-100 text-blue-800' },
+  failed: { text: 'Failed', color: 'bg-red-100 text-red-800' },
+  completed: { text: 'Completed', color: 'bg-green-100 text-green-800' },
+}
+
+function JobDetailModal({
+  job,
+  open,
+  onOpenChange,
+  onRetry,
+  onDelete,
+}: {
+  job: ScrapeJob | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onRetry?: (id: string) => void
+  onDelete?: (id: string) => void
+}) {
+  if (!job) return null
+
+  const statusInfo = STATUS_LABEL[job.status] ?? {
+    text: job.status,
+    color: 'bg-muted text-foreground',
+  }
+  const data = job.data as Record<string, unknown>
+
+  return (
+    <AppDialog open={open} onOpenChange={onOpenChange}>
+      <AppDialogContent size="lg" className="max-h-[80vh] overflow-y-auto">
+        <AppDialogHeader>
+          <AppDialogTitle className="flex items-center gap-2">
+            {getJobLabel(job)}
+            <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', statusInfo.color)}>
+              {statusInfo.text}
+            </span>
+          </AppDialogTitle>
+          <AppDialogDescription>Job ID: {job.id}</AppDialogDescription>
+        </AppDialogHeader>
+
+        <div className="space-y-4 text-sm">
+          {/* Timestamps */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Created</span>
+            </div>
+            <div>{new Date(job.createdAt).toLocaleString()}</div>
+
+            {job.processedAt && (
+              <>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Started</span>
+                </div>
+                <div>{new Date(job.processedAt).toLocaleString()}</div>
+              </>
+            )}
+
+            {job.finishedAt && (
+              <>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Finished</span>
+                </div>
+                <div>{new Date(job.finishedAt).toLocaleString()}</div>
+              </>
+            )}
+
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Hash className="h-3.5 w-3.5" />
+              <span>Attempts</span>
+            </div>
+            <div>{job.attemptsMade}</div>
+          </div>
+
+          {/* Job data */}
+          <div>
+            <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
+              <Info className="h-3.5 w-3.5" />
+              <span>Job Data</span>
+            </div>
+            <div className="bg-muted rounded-md p-3 font-mono text-xs overflow-x-auto">
+              {Object.entries(data).map(([key, val]) => (
+                <div key={key} className="flex gap-2">
+                  <span className="text-muted-foreground shrink-0">{key}:</span>
+                  <span className="break-all">{String(val)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Error section */}
+          {job.failedReason && (
+            <div>
+              <div className="flex items-center gap-2 text-red-600 mb-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>
+                  {job.status === 'failed' ? 'Error' : 'Previous Error'}
+                  {job.attemptsMade > 1 && ` (attempt ${job.attemptsMade})`}
+                </span>
+              </div>
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-md p-3 text-xs text-red-700 dark:text-red-400 font-mono whitespace-pre-wrap break-all">
+                {job.failedReason}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            {job.status === 'failed' && onRetry && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onRetry(job.id)
+                  onOpenChange(false)
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Retry
+              </Button>
+            )}
+            {onDelete && job.status !== 'active' && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  onDelete(job.id)
+                  onOpenChange(false)
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Delete
+              </Button>
+            )}
+          </div>
+        </div>
+      </AppDialogContent>
+    </AppDialog>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Sortable Job Card (for waiting + failed lanes)
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -254,6 +428,8 @@ function SortableJobCard({
   onRetry,
   isSelected,
   onToggleSelect,
+  onViewDetail,
+  isRetrying,
 }: {
   job: ScrapeJob
   sortableId: string
@@ -261,6 +437,8 @@ function SortableJobCard({
   onRetry?: (id: string) => void
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
+  onViewDetail?: (job: ScrapeJob) => void
+  isRetrying?: boolean
 }) {
   const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -285,6 +463,8 @@ function SortableJobCard({
         onRetry={onRetry}
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
+        onViewDetail={onViewDetail}
+        isRetrying={isRetrying}
       />
     </div>
   )
@@ -327,6 +507,9 @@ function SwimLane({
   selectedIds,
   onToggleSelect,
   onSelectAll,
+  onViewDetail,
+  retryingJobIds,
+  sortableIdToJob,
 }: {
   title: string
   status: string
@@ -338,37 +521,53 @@ function SwimLane({
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onSelectAll?: (jobIds: string[]) => void
+  onViewDetail?: (job: ScrapeJob) => void
+  retryingJobIds?: Set<string>
+  sortableIdToJob?: Map<string, ScrapeJob>
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const sentinelRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const visibleJobs = jobs.slice(0, visibleCount)
+  const itemCount = sortableIds?.length ?? jobs.length
+  const visibleJobs = sortableIds ? jobs : jobs.slice(0, visibleCount)
   const visibleSortableIds = sortableIds?.slice(0, visibleCount)
-  const hasMore = visibleCount < jobs.length
+  const hasMore = visibleCount < itemCount
 
   const laneJobIds = jobs.map(j => j.id)
   const selectedInLane = laneJobIds.filter(id => selectedIds.has(id))
   const allSelected = jobs.length > 0 && selectedInLane.length === jobs.length
 
+  // Reset pagination when item count shrinks
   useEffect(() => {
-    if (jobs.length <= PAGE_SIZE) setVisibleCount(PAGE_SIZE)
-  }, [jobs.length])
+    if (itemCount <= PAGE_SIZE) setVisibleCount(PAGE_SIZE)
+  }, [itemCount])
 
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && hasMore) {
-          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, jobs.length))
-        }
-      },
-      { root: scrollRef.current, threshold: 0.1 },
-    )
-    observer.observe(sentinelRef.current)
-    return () => observer.disconnect()
-  }, [hasMore, jobs.length])
+  // Keep itemCount in a ref so the observer callback sees the latest value
+  const itemCountRef = useRef(itemCount)
+  itemCountRef.current = itemCount
+
+  // Infinite scroll via callback ref — reconnects when the sentinel mounts/unmounts
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const sentinelCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+        observerRef.current = null
+      }
+      if (!node) return
+      observerRef.current = new IntersectionObserver(
+        entries => {
+          if (entries[0].isIntersecting) {
+            setVisibleCount(prev => Math.min(prev + PAGE_SIZE, itemCountRef.current))
+          }
+        },
+        { root: scrollRef.current, threshold: 0 },
+      )
+      observerRef.current.observe(node)
+    },
+    [hasMore], // eslint-disable-line react-hooks/exhaustive-deps
+  )
 
   const isSortable = !!sortableIds
 
@@ -425,17 +624,23 @@ function SwimLane({
           <DroppableLane id={`lane:${status}`}>
             <SortableContext items={visibleSortableIds!} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {visibleJobs.map((job, i) => (
-                  <SortableJobCard
-                    key={visibleSortableIds![i]}
-                    job={job}
-                    sortableId={visibleSortableIds![i]}
-                    onDelete={onDelete}
-                    onRetry={onRetry}
-                    isSelected={selectedIds.has(job.id)}
-                    onToggleSelect={onToggleSelect}
-                  />
-                ))}
+                {visibleSortableIds!.map(sortId => {
+                  const job = sortableIdToJob?.get(sortId)
+                  if (!job) return null
+                  return (
+                    <SortableJobCard
+                      key={sortId}
+                      job={job}
+                      sortableId={sortId}
+                      onDelete={onDelete}
+                      onRetry={onRetry}
+                      isSelected={selectedIds.has(job.id)}
+                      onToggleSelect={onToggleSelect}
+                      onViewDetail={onViewDetail}
+                      isRetrying={retryingJobIds?.has(job.id)}
+                    />
+                  )
+                })}
               </div>
             </SortableContext>
           </DroppableLane>
@@ -448,10 +653,12 @@ function SwimLane({
               onRetry={onRetry}
               isSelected={selectedIds.has(job.id)}
               onToggleSelect={onToggleSelect}
+              onViewDetail={onViewDetail}
+              isRetrying={retryingJobIds?.has(job.id)}
             />
           ))
         )}
-        {hasMore && <div ref={sentinelRef} className="h-1" />}
+        {hasMore && <div ref={sentinelCallback} className="h-4" />}
         {jobs.length === 0 && !isSortable && (
           <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">
             No jobs
@@ -573,6 +780,15 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  // Job detail modal state
+  const [detailJob, setDetailJob] = useState<ScrapeJob | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+
+  const handleViewDetail = useCallback((job: ScrapeJob) => {
+    setDetailJob(job)
+    setDetailOpen(true)
+  }, [])
 
   const hideJob = useCallback((id: string) => {
     setHiddenJobIds(prev => new Set(prev).add(id))
@@ -736,31 +952,49 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const hasFailedSelected = failed.some(j => selectedIds.has(j.id))
 
-  // Unique sortable IDs
-  const waitingSortableIds = waiting.map(jobKey)
-  const failedSortableIds = failed.map(j => `failed:${jobKey(j)}`)
+  // Sortable IDs derived from server data
+  const serverWaitingIds = waiting.map(jobKey)
+  const serverFailedIds = failed.map(j => `failed:${jobKey(j)}`)
 
   const sortableIdToJob = new Map<string, ScrapeJob>()
   for (const j of waiting) sortableIdToJob.set(jobKey(j), j)
   for (const j of failed) sortableIdToJob.set(`failed:${jobKey(j)}`, j)
 
-  // Drag state
+  // Drag state — during cross-container drag, we manage container assignments
+  // locally so dnd-kit can animate gaps correctly (canonical multi-container pattern)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [overContainer, setOverContainer] = useState<string | null>(null)
+  const [containerOverride, setContainerOverride] = useState<{
+    waiting: string[]
+    failed: string[]
+  } | null>(null)
+
+  // Use overridden containers during drag, server data otherwise
+  const waitingSortableIds = containerOverride?.waiting ?? serverWaitingIds
+  const failedSortableIds = containerOverride?.failed ?? serverFailedIds
+
   const activeJob = activeJobId ? (sortableIdToJob.get(activeJobId) ?? null) : null
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  const collisionDetection: CollisionDetection = useCallback(args => {
-    const pointerCollisions = pointerWithin(args)
-    const laneHit = pointerCollisions.find(c => String(c.id).startsWith('lane:'))
-    const centerCollisions = closestCenter(args)
-    if (laneHit) {
-      if (centerCollisions.length > 0) return centerCollisions
-      return [laneHit]
-    }
-    return centerCollisions
-  }, [])
+  const collisionDetection: CollisionDetection = useCallback(
+    args => {
+      const pointerCollisions = pointerWithin(args)
+      const laneHit = pointerCollisions.find(c => String(c.id).startsWith('lane:'))
+      const centerCollisions = closestCenter(args)
+
+      if (laneHit) {
+        const laneContainer = String(laneHit.id) === 'lane:waiting' ? 'waiting' : 'failed'
+        const laneIds = laneContainer === 'waiting' ? waitingSortableIds : failedSortableIds
+        const laneItems = centerCollisions.filter(c => laneIds.includes(String(c.id)))
+        if (laneItems.length > 0) return laneItems
+        return [laneHit]
+      }
+
+      return centerCollisions
+    },
+    [waitingSortableIds, failedSortableIds],
+  )
 
   function handleDragStart(event: DragStartEvent) {
     setActiveJobId(String(event.active.id))
@@ -770,56 +1004,102 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
     const { active: dragActive, over } = event
     if (!over) {
       setOverContainer(null)
+      setContainerOverride(null)
       return
     }
-    const from = findContainer(String(dragActive.id), waitingSortableIds, failedSortableIds)
-    const to = findContainer(String(over.id), waitingSortableIds, failedSortableIds)
-    setOverContainer(from === 'failed' && to === 'waiting' ? 'waiting' : null)
+
+    const activeId = String(dragActive.id)
+    const overId = String(over.id)
+
+    // Determine source container from server data (stable reference)
+    const from = findContainer(activeId, serverWaitingIds, serverFailedIds)
+    // Determine target container from current (possibly overridden) data
+    const to = findContainer(overId, waitingSortableIds, failedSortableIds)
+
+    if (from === 'failed' && to === 'waiting') {
+      setOverContainer('waiting')
+
+      // Move the item from failed → waiting in local state (canonical dnd-kit pattern).
+      // This makes dnd-kit animate the gap between waiting cards.
+      const currentWaiting = containerOverride?.waiting ?? [...serverWaitingIds]
+      const currentFailed = containerOverride?.failed ?? [...serverFailedIds]
+
+      // Only move if not already in waiting
+      if (!currentWaiting.includes(activeId)) {
+        const newFailed = currentFailed.filter(id => id !== activeId)
+
+        // Determine insertion index from the over target
+        const overIndex = currentWaiting.indexOf(overId)
+        const newWaiting = [...currentWaiting]
+
+        if (overIndex >= 0) {
+          // Insert near the item we're hovering over
+          const isBelowCenter =
+            (dragActive.rect.current.translated?.top ?? 0) > over.rect.top + over.rect.height / 2
+          newWaiting.splice(isBelowCenter ? overIndex + 1 : overIndex, 0, activeId)
+        } else {
+          // Over the lane droppable — append
+          newWaiting.push(activeId)
+        }
+
+        setContainerOverride({ waiting: newWaiting, failed: newFailed })
+      } else {
+        // Already in waiting — reorder within it (same as within-container drag)
+        const oldIndex = currentWaiting.indexOf(activeId)
+        const overIndex = currentWaiting.indexOf(overId)
+        if (oldIndex >= 0 && overIndex >= 0 && oldIndex !== overIndex) {
+          setContainerOverride({
+            waiting: arrayMove(currentWaiting, oldIndex, overIndex),
+            failed: currentFailed,
+          })
+        }
+      }
+    } else if (from === 'failed' && to === 'failed') {
+      // Dragged back to failed lane — revert the override
+      setOverContainer(null)
+      setContainerOverride(null)
+    } else {
+      setOverContainer(from === 'failed' && to === 'waiting' ? 'waiting' : null)
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active: dragActive, over } = event
+    const override = containerOverride
+
     setActiveJobId(null)
     setOverContainer(null)
+    setContainerOverride(null)
     if (!over) return
 
     const activeId = String(dragActive.id)
     const overId = String(over.id)
-    const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
-    const to = findContainer(overId, waitingSortableIds, failedSortableIds)
 
-    // Cross-lane: failed → waiting = retry at drop position
-    if (from === 'failed' && to === 'waiting') {
+    // Check if the item was moved cross-container (failed → waiting)
+    const fromServer = findContainer(activeId, serverWaitingIds, serverFailedIds)
+    const inOverrideWaiting = override?.waiting.includes(activeId)
+
+    if (fromServer === 'failed' && inOverrideWaiting) {
       const job = sortableIdToJob.get(activeId)
       if (!job) return
 
       const newKey = jobKey(job)
 
-      // Fire the retry mutation (don't hide — retryingJobIds handles the visual move)
+      // Fire retry mutation
       setRetryingJobIds(prev => new Set(prev).add(job.id))
       retryJobMutation(job.id)
 
-      // Determine where to insert in the waiting order
-      const currentIds = [...waitingSortableIds]
-      const overIndex = currentIds.indexOf(overId)
-
-      if (overIndex >= 0) {
-        // Dropped over a specific waiting card — check if above or below its center
-        const overRect = over.rect
-        const draggedTop = dragActive.rect.current.translated?.top ?? 0
-        const overCenter = overRect.top + overRect.height / 2
-        const insertIndex = draggedTop > overCenter ? overIndex + 1 : overIndex
-        currentIds.splice(insertIndex, 0, newKey)
-      } else {
-        // Dropped on the lane droppable itself (empty lane or below all cards)
-        currentIds.push(newKey)
-      }
-
-      setWaitingOrder(currentIds)
+      // Use the override's waiting order (which has the item at the correct position)
+      // and replace the failed: prefixed ID with the real job key
+      const finalOrder = override!.waiting.map(id => (id === activeId ? newKey : id))
+      setWaitingOrder(finalOrder)
       return
     }
 
     // Same-lane reorder within waiting
+    const from = findContainer(activeId, waitingSortableIds, failedSortableIds)
+    const to = findContainer(overId, waitingSortableIds, failedSortableIds)
+
     if (from === 'waiting' && to === 'waiting' && activeId !== overId) {
       const oldIndex = waitingSortableIds.indexOf(activeId)
       const newIndex = waitingSortableIds.indexOf(overId)
@@ -832,6 +1112,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   function handleDragCancel() {
     setActiveJobId(null)
     setOverContainer(null)
+    setContainerOverride(null)
   }
 
   return (
@@ -895,6 +1176,9 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onSelectAll={handleSelectAll}
+            onViewDetail={handleViewDetail}
+            retryingJobIds={retryingJobIds}
+            sortableIdToJob={sortableIdToJob}
           />
           <SwimLane
             title="Active"
@@ -903,6 +1187,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             onDelete={handleDelete}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
+            onViewDetail={handleViewDetail}
           />
           <SwimLane
             title="Failed"
@@ -914,6 +1199,8 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onSelectAll={handleSelectAll}
+            onViewDetail={handleViewDetail}
+            sortableIdToJob={sortableIdToJob}
           />
           <SwimLane
             title="Completed"
@@ -923,6 +1210,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onSelectAll={handleSelectAll}
+            onViewDetail={handleViewDetail}
           />
         </div>
         <DragOverlay>
@@ -933,6 +1221,14 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <JobDetailModal
+        job={detailJob}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onRetry={handleRetry}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
