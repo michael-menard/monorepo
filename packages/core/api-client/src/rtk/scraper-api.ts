@@ -84,7 +84,7 @@ export const scraperApi = createApi({
         url: `/scraper/jobs/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperQueues'],
+      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
       async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
         // Patch all cached getScrapeJobs queries to remove this job
         const patches = scraperApi.util
@@ -120,7 +120,7 @@ export const scraperApi = createApi({
         url: `/scraper/jobs?status=${status}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['ScraperQueues'],
+      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
       async onQueryStarted(status, { dispatch, queryFulfilled, getState }) {
         const patches = scraperApi.util
           .selectInvalidatedBy(getState(), ['ScraperJobs'])
@@ -151,7 +151,7 @@ export const scraperApi = createApi({
         url: `/scraper/jobs/${id}/retry`,
         method: 'POST',
       }),
-      invalidatesTags: ['ScraperQueues'],
+      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
       async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
         const patches = scraperApi.util
           .selectInvalidatedBy(getState(), ['ScraperJobs'])
