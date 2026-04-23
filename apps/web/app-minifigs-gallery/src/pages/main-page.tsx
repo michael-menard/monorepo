@@ -428,7 +428,7 @@ export function MainPage() {
 
       {/* Grid */}
       {isLoading && allItems.length === 0 ? (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
           {Array.from({ length: 20 }).map((_, i) => (
             <div key={i} className="min-w-0 overflow-hidden space-y-2">
               <Skeleton className="aspect-square rounded-lg" />
@@ -441,7 +441,7 @@ export function MainPage() {
           <p className="text-sm text-muted-foreground">
             {data?.pagination.total ?? allItems.length} minifigs
           </p>
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
             {allItems.map(minifig => (
               <div key={minifig.id} className="min-w-0 overflow-hidden">
                 <MinifigCard
@@ -459,7 +459,7 @@ export function MainPage() {
           {hasMore ? (
             <div ref={sentinelRef} className="flex justify-center py-8">
               {isFetching ? (
-                <div className="grid grid-cols-10 gap-2 w-full">
+                <div className="grid grid-cols-7 gap-2 w-full">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Skeleton className="aspect-[3/4] rounded-lg" />
