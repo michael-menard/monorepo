@@ -74,8 +74,7 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
   const [isPageTransitioning, setIsPageTransitioning] = useState(false)
 
   // Determine which tab should be active based on current route
-  const getActiveTab = () => {
-    const path = location.pathname
+  const getTabFromPath = (path: string) => {
     if (path === '/' || path === '/dashboard' || path.startsWith('/dashboard/')) {
       return '/dashboard'
     }
@@ -88,8 +87,19 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
     return ''
   }
 
+  // Track active tab in local state so Radix updates immediately on click,
+  // avoiding the flash where the route hasn't updated yet but Radix re-reads
+  // the controlled value from the stale location.
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname))
+
+  // Sync tab state when route changes (back/forward, programmatic navigation)
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname))
+  }, [location.pathname])
+
   const handleTabChange = (value: string) => {
     if (value) {
+      setActiveTab(value)
       navigate(value)
     }
   }
@@ -154,14 +164,14 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
   if (!auth.isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>{children}</MainArea>
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>
+          {children}
+        </MainArea>
       </div>
     )
   }
 
   // Authenticated layout with full navigation and LEGO-inspired design
-  const activeTab = getActiveTab()
-
   return (
     <NavigationProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
@@ -206,7 +216,9 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
         </div>
 
         {/* Main content area */}
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>{children}</MainArea>
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname}>
+          {children}
+        </MainArea>
 
         {/* Footer with slide-up animation */}
         <motion.div
