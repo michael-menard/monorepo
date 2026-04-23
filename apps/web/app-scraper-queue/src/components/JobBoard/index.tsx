@@ -15,6 +15,9 @@ import {
   useDraggable,
   type DragStartEvent,
   type DragEndEvent,
+  type CollisionDetection,
+  pointerWithin,
+  rectIntersection,
   PointerSensor,
   useSensor,
   useSensors,
@@ -224,18 +227,13 @@ function SortableJobCard({ job }: { job: ScrapeJob }) {
 // ─────────────────────────────────────────────────────────────────────────
 
 function DraggableJobCard({ job }: { job: ScrapeJob }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `failed:${job.id}`,
     data: { job, source: 'failed' },
   })
 
-  const style = {
-    transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
-    opacity: isDragging ? 0.4 : 1,
-  }
-
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.3 : 1 }} {...attributes} {...listeners}>
       <JobCard job={job} isDraggable />
     </div>
   )
@@ -412,6 +410,20 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
+  // Custom collision: failed cards use pointerWithin (targets lane containers),
+  // waiting cards use closestCenter (targets sortable items within the lane)
+  const collisionDetection: CollisionDetection = useCallback(args => {
+    const dragId = String(args.active.id)
+    if (dragId.startsWith('failed:')) {
+      // pointerWithin finds which droppable container the pointer is inside
+      const pointerCollisions = pointerWithin(args)
+      if (pointerCollisions.length > 0) return pointerCollisions
+      // Fallback to rect intersection for edge cases
+      return rectIntersection(args)
+    }
+    return closestCenter(args)
+  }, [])
+
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id)
     setActiveJobId(id)
@@ -488,7 +500,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
