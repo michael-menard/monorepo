@@ -3,9 +3,9 @@
 module.exports = {
   theme: {
     extend: {
-      // LEGO MOC Color Palette - Teal/Sage/Taupe + Cyberpunk Glow
+      // Dark Academia Color Palette
       colors: {
-        // shadcn/ui semantic colors (from CSS variables)
+        // Semantic colors (from CSS variables)
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -40,71 +40,82 @@ module.exports = {
           foreground: 'hsl(var(--card-foreground))',
         },
 
-        // Primary Brand - Teal Family
+        // Chart colors
+        chart: {
+          1: 'hsl(var(--chart-1))',
+          2: 'hsl(var(--chart-2))',
+          3: 'hsl(var(--chart-3))',
+          4: 'hsl(var(--chart-4))',
+          5: 'hsl(var(--chart-5))',
+        },
+
+        // Sidebar colors
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
+        },
+
+        // Foundation color scales (from CSS variables)
         teal: {
-          100: 'var(--color-teal-100)', // #D1E3E8 - Disabled states
-          400: 'var(--color-teal-400)', // #5FA3B8 - Secondary interactive
-          600: 'var(--color-teal-600)', // #1B5E6D - Primary (DEFAULT)
-          800: 'var(--color-teal-800)', // #0F4654 - Hover states
-          950: 'var(--color-teal-950)', // #082B34 - Dark mode bg
+          100: 'var(--color-teal-100)',
+          400: 'var(--color-teal-400)',
+          600: 'var(--color-teal-600)',
+          800: 'var(--color-teal-800)',
+          950: 'var(--color-teal-950)',
           DEFAULT: 'var(--color-teal-600)',
         },
-        // Accent - Green/Sage Family
         green: {
-          100: 'var(--color-green-100)', // #E9EDE8 - Soft backgrounds
-          300: 'var(--color-green-300)', // #C4D1C5 - Borders, dividers
-          500: 'var(--color-green-500)', // #A8B8A3 - Accents (DEFAULT)
-          700: 'var(--color-green-700)', // #6B7E68 - Secondary elements
-          900: 'var(--color-green-900)', // #2D5F4F - Success states
+          100: 'var(--color-green-100)',
+          300: 'var(--color-green-300)',
+          500: 'var(--color-green-500)',
+          700: 'var(--color-green-700)',
+          900: 'var(--color-green-900)',
           DEFAULT: 'var(--color-green-500)',
         },
-        // Neutral - Taupe/Earth Family
         neutral: {
-          50: 'var(--color-neutral-50)', // #F9F7F5 - Light backgrounds
-          100: 'var(--color-neutral-100)', // #F5F1ED - Primary background
-          300: 'var(--color-neutral-300)', // #D9CFC5 - Borders
-          500: 'var(--color-neutral-500)', // #9B8B7E - Secondary text
-          700: 'var(--color-neutral-700)', // #6B5D52 - Emphasis text
-          900: 'var(--color-neutral-900)', // #2C2C2C - Primary text
+          50: 'var(--color-neutral-50)',
+          100: 'var(--color-neutral-100)',
+          300: 'var(--color-neutral-300)',
+          500: 'var(--color-neutral-500)',
+          700: 'var(--color-neutral-700)',
+          900: 'var(--color-neutral-900)',
           DEFAULT: 'var(--color-neutral-500)',
         },
-        // Semantic Colors
-        success: 'var(--color-success)', // #2D5F4F - Forest Green
-        warning: 'var(--color-warning)', // #D4A574 - Warm Ochre
-        error: 'var(--color-error)', // #A85B4B - Terracotta Red
-        info: 'var(--color-info)', // #5FA3B8 - Soft Teal
-        // Additional Accents
-        clay: 'var(--color-clay)', // #B89968 - MOC highlights
-        'dusty-blue': 'var(--color-dusty-blue)', // #7B8FA3 - Secondary accent
-        gold: 'var(--color-gold)', // #B8A876 - Premium/featured
 
-        // Cyberpunk Glow Colors (for border/ring accents)
+        // Semantic Colors
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        error: 'var(--color-error)',
+        info: 'var(--color-info)',
+
+        // Additional Accents
+        clay: 'var(--color-clay)',
+        'dusty-blue': 'var(--color-dusty-blue)',
+        gold: 'var(--color-gold)',
+
+        // Glow Colors (for border/ring accents in dark mode)
         glow: {
-          primary: 'var(--glow-primary)', // sky-500/30
-          accent: 'var(--glow-accent)', // amber-500/30
-          success: 'var(--glow-success)', // emerald-500/30
-          error: 'var(--glow-error)', // red-500/30
-          info: 'var(--glow-info)', // blue-500/30
-          violet: 'var(--glow-violet)', // violet-500/30
+          primary: 'var(--glow-primary)',
+          accent: 'var(--glow-accent)',
+          success: 'var(--glow-success)',
+          error: 'var(--glow-error)',
+          info: 'var(--glow-info)',
+          violet: 'var(--glow-violet)',
         },
 
         // Translucent Surface Colors
         surface: {
-          DEFAULT: 'var(--surface-translucent)', // slate-900/50
-          light: 'var(--surface-translucent-light)', // slate-800/50
-          border: 'var(--surface-border)', // slate-700/50
-          'border-glow': 'var(--surface-border-glow)', // sky-500/30
+          DEFAULT: 'var(--surface-translucent)',
+          light: 'var(--surface-translucent-light)',
+          border: 'var(--surface-border)',
+          'border-glow': 'var(--surface-border-glow)',
         },
-      },
-
-      // Gradient color stops for use with bg-gradient-to-r
-      gradientColorStops: {
-        'primary-from': 'var(--gradient-primary-from)', // sky-400
-        'primary-to': 'var(--gradient-primary-to)', // teal-600
-        'accent-from': 'var(--gradient-accent-from)', // amber-400
-        'accent-to': 'var(--gradient-accent-to)', // orange-500
-        'success-from': 'var(--gradient-success-from)', // emerald-400
-        'success-to': 'var(--gradient-success-to)', // green-600
       },
 
       // Typography

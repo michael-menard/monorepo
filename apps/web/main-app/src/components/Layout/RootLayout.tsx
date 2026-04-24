@@ -107,7 +107,7 @@ function AuthenticatedLayout({
 
   return (
     <NavigationProvider>
-      <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
+      <div className="h-full flex flex-col bg-background">
         <PageTransitionSpinner />
 
         {/* Header */}

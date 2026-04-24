@@ -155,124 +155,139 @@
 }
 
 /* ===========================================
-   LIGHT THEME (Default)
+   LIGHT THEME - Dark Academia (Default)
    =========================================== */
 
 @layer base {
   :root {
     /*
-     * New Teal/Sage/Taupe Palette
-     * Primary: Teal 600 (#1B5E6D)
-     * Accent: Sage Green (#A8B8A3)
-     * Background: Light Taupe (#F5F1ED)
-     * Text: Charcoal (#2C2C2C)
+     * Light Dark Academia — Higher Contrast
+     * Primary: Darker Olive Green
+     * Accent: Soft Sage
+     * Background: Warm Cream
+     * Text: Dark Olive-Gray
+     * Muted text: Slate-Teal
      */
 
     /* Core colors */
-    --background: 30 29% 95%; /* Neutral 100 - #F5F1ED */
-    --foreground: 0 0% 17%; /* Neutral 900 - #2C2C2C */
+    --background: 40 40% 92%; /* warm cream */
+    --foreground: 120 7% 19%; /* dark olive-gray */
 
-    /* Primary - Deep Teal */
-    --primary: 191 60% 27%; /* Teal 600 - #1B5E6D */
-    --primary-foreground: 0 0% 100%; /* White */
+    /* Primary - Darker Olive Green */
+    --primary: 99 27% 24%;
+    --primary-foreground: 40 60% 95%;
 
-    /* Secondary - Warm Taupe */
-    --secondary: 30 25% 97%; /* Neutral 50 - #F9F7F5 */
-    --secondary-foreground: 27 14% 55%; /* Neutral 500 - #9B8B7E */
+    /* Secondary - Sand Beige */
+    --secondary: 37 20% 79%;
+    --secondary-foreground: 91 18% 15%;
 
-    /* Accent - Sage Green */
-    --accent: 109 12% 68%; /* Green 500 - #A8B8A3 */
-    --accent-foreground: 0 0% 17%; /* Charcoal for contrast */
+    /* Accent - Soft Sage */
+    --accent: 109 12% 63%;
+    --accent-foreground: 120 7% 19%;
 
-    /* Muted - Very Light Taupe */
-    --muted: 30 25% 97%; /* Neutral 50 - #F9F7F5 */
-    --muted-foreground: 27 14% 55%; /* Neutral 500 - #9B8B7E */
+    /* Muted */
+    --muted: 37 22% 83%;
+    --muted-foreground: 171 14% 34%; /* slate-teal */
 
     /* Component colors */
-    --card: 0 0% 100%; /* White cards for contrast */
-    --card-foreground: 0 0% 17%; /* Charcoal */
+    --card: 38 63% 95%; /* warm ivory */
+    --card-foreground: 120 7% 19%;
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 0 0% 17%; /* Charcoal */
+    --popover: 38 63% 95%;
+    --popover-foreground: 120 7% 19%;
 
     /* Form colors */
-    --border: 30 24% 81%; /* Neutral 300 - #D9CFC5 */
-    --input: 30 24% 81%; /* Neutral 300 */
-    --ring: 191 60% 27%; /* Teal 600 - focus ring */
+    --border: 34 20% 73%; /* slightly darker border */
+    --input: 38 22% 89%;
+    --ring: 99 27% 24%;
 
     /* Semantic - Feedback colors */
-    --destructive: 10 38% 48%; /* Terracotta Red - #A85B4B */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 1 51% 41%; /* darker burgundy */
+    --destructive-foreground: 40 60% 95%;
 
-    --success: 161 35% 27%; /* Forest Green - #2D5F4F */
-    --success-foreground: 0 0% 100%;
+    /* Chart colors */
+    --chart-1: 99 27% 24%; /* darker olive green */
+    --chart-2: 1 51% 41%; /* burgundy */
+    --chart-3: 35 34% 51%; /* darker gold/ochre */
+    --chart-4: 120 7% 19%; /* dark olive-gray */
+    --chart-5: 171 14% 34%; /* slate-teal */
 
-    --warning: 29 52% 64%; /* Warm Ochre - #D4A574 */
-    --warning-foreground: 0 0% 17%; /* Dark text for contrast */
-
-    --info: 193 37% 55%; /* Soft Teal - #5FA3B8 */
-    --info-foreground: 0 0% 100%;
+    /* Sidebar */
+    --sidebar: 38 27% 89%;
+    --sidebar-foreground: 120 7% 19%;
+    --sidebar-primary: 99 27% 24%;
+    --sidebar-primary-foreground: 40 60% 95%;
+    --sidebar-accent: 37 20% 79%;
+    --sidebar-accent-foreground: 91 18% 15%;
+    --sidebar-border: 34 20% 73%;
+    --sidebar-ring: 99 27% 24%;
 
     /* Radius */
-    --radius: 0.5rem;
+    --radius: 0.375rem;
   }
 
   /* ===========================================
-     DARK THEME (Cyberpunk / LEGO Command Center)
+     DARK THEME - Dark Academia (Higher Contrast)
      =========================================== */
 
   .dark {
     /*
-     * LEGO Cyberpunk Dark Theme
-     * Background: Deep slate gradient base
-     * Primary: Sky/Cyan for that futuristic glow
-     * Accent: Warm amber to keep LEGO personality
-     * Cards: Translucent with glow borders
+     * Dark Academia — Higher Contrast
+     * Inspired by Hunt Club, Iron Ore, Dark Auburn, Urbane Bronze
+     * Brighter primaries and more visible borders
      */
 
-    /* Core colors - deep slate base */
-    --background: 222 47% 5%; /* slate-950 - #020617 */
-    --foreground: 210 40% 96%; /* slate-100 - #f1f5f9 */
+    /* Core colors - deeper warm charcoal */
+    --background: 24 27% 7%;
+    --foreground: 37 26% 90%; /* brighter warm cream */
 
-    /* Primary - Sky/Cyan (cyberpunk accent) */
-    --primary: 199 89% 48%; /* sky-500 - #0ea5e9 */
-    --primary-foreground: 222 47% 5%; /* slate-950 */
+    /* Primary - Brighter forest green */
+    --primary: 152 45% 35%;
+    --primary-foreground: 23 33% 4%;
 
-    /* Secondary - Slate for supporting elements */
-    --secondary: 217 33% 17%; /* slate-800 - #1e293b */
-    --secondary-foreground: 210 40% 96%; /* slate-100 */
+    /* Secondary - Urbane Bronze */
+    --secondary: 24 18% 18%;
+    --secondary-foreground: 37 15% 84%;
 
-    /* Accent - Amber (warm LEGO feel) */
-    --accent: 38 92% 50%; /* amber-500 - #f59e0b */
-    --accent-foreground: 222 47% 5%; /* slate-950 */
+    /* Accent - Brighter burgundy */
+    --accent: 2 44% 49%;
+    --accent-foreground: 23 33% 4%;
 
-    /* Muted - Subtle slate */
-    --muted: 217 33% 17%; /* slate-800 */
-    --muted-foreground: 215 20% 65%; /* slate-400 - #94a3b8 */
+    /* Muted */
+    --muted: 24 16% 16%;
+    --muted-foreground: 34 11% 61%; /* brighter muted tan */
 
-    /* Component colors - translucent surfaces */
-    --card: 222 47% 8%; /* ~slate-900 - for solid fallback */
-    --card-foreground: 210 40% 96%; /* slate-100 */
+    /* Component colors */
+    --card: 24 20% 12%;
+    --card-foreground: 37 26% 90%;
 
-    --popover: 222 47% 8%; /* ~slate-900 */
-    --popover-foreground: 210 40% 96%; /* slate-100 */
+    --popover: 24 20% 12%;
+    --popover-foreground: 37 26% 90%;
 
     /* Form colors */
-    --border: 217 19% 27%; /* slate-700 - #334155 */
-    --input: 217 19% 27%; /* slate-700 */
-    --ring: 199 89% 48%; /* sky-500 - matches primary */
+    --border: 24 14% 26%; /* more visible border */
+    --input: 24 18% 14%;
+    --ring: 152 45% 35%;
 
-    /* Semantic - Feedback colors (vibrant for dark mode) */
-    --destructive: 0 72% 51%; /* red-500 - #ef4444 */
-    --destructive-foreground: 210 40% 96%;
+    /* Semantic - Feedback colors */
+    --destructive: 1 50% 49%; /* brighter burgundy */
+    --destructive-foreground: 37 29% 93%;
 
-    --success: 160 84% 39%; /* emerald-500 - #10b981 */
-    --success-foreground: 210 40% 96%;
+    /* Chart colors */
+    --chart-1: 152 45% 35%; /* brighter forest green */
+    --chart-2: 2 44% 49%; /* brighter burgundy */
+    --chart-3: 36 57% 52%; /* brighter golden oak */
+    --chart-4: 24 18% 44%; /* lighter bronze */
+    --chart-5: 149 27% 44%; /* brighter sage green */
 
-    --warning: 38 92% 50%; /* amber-500 - #f59e0b */
-    --warning-foreground: 222 47% 5%; /* dark text for contrast */
-
-    --info: 217 91% 60%; /* blue-500 - #3b82f6 */
-    --info-foreground: 210 40% 96%;
+    /* Sidebar */
+    --sidebar: 24 29% 5%;
+    --sidebar-foreground: 37 26% 90%;
+    --sidebar-primary: 152 45% 35%;
+    --sidebar-primary-foreground: 23 33% 4%;
+    --sidebar-accent: 24 18% 18%;
+    --sidebar-accent-foreground: 37 15% 84%;
+    --sidebar-border: 24 14% 26%;
+    --sidebar-ring: 152 45% 35%;
   }
 }

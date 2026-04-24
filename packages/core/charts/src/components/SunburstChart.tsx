@@ -71,20 +71,35 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
       .innerRadius(d => Math.max(d.y0 * 0.85, d.depth === 1 ? radius * 0.22 : d.y0 * 0.85))
       .outerRadius(d => d.y1 * 0.85 - 1)
 
-    // Color scale for themes (level 1)
+    // Read computed CSS variable as a color string
+    const rootStyles = getComputedStyle(document.documentElement)
+    const hslVar = (name: string, fallback: string) => {
+      const val = rootStyles.getPropertyValue(name).trim()
+      return val ? `hsl(${val})` : fallback
+    }
+
+    // Resolved text colors for SVG labels (can't rely on CSS vars in inline SVG styles)
+    const foregroundColor = hslVar('--foreground', '#2e3b2d')
+    const mutedFgColor = hslVar('--muted-foreground', '#4a7175')
+
+    // Color scale for themes (level 1) — Dark Academia palette
     const themeColors = [
-      '#0ea5e9', // sky-500
-      '#14b8a6', // teal-500
-      '#f59e0b', // amber-500
-      '#ef4444', // red-500
-      '#8b5cf6', // violet-500
-      '#ec4899', // pink-500
-      '#22c55e', // green-500
-      '#f97316', // orange-500
-      '#06b6d4', // cyan-500
-      '#a855f7', // purple-500
-      '#6366f1', // indigo-500
-      '#84cc16', // lime-500
+      hslVar('--chart-1', '#3d5a2e'), // olive green
+      hslVar('--chart-2', '#9b3a3a'), // burgundy
+      hslVar('--chart-3', '#b8893a'), // golden ochre
+      hslVar('--chart-4', '#2e3b2d'), // dark olive-gray
+      hslVar('--chart-5', '#4a7175'), // slate-teal
+      '#6b7e68', // deep sage
+      '#8b6f4e', // warm clay
+      '#5c6b52', // moss
+      '#a67c52', // leather brown
+      '#7b8fa3', // dusty blue
+      '#8a7c6b', // warm taupe
+      '#6e8c5e', // fern green
+      '#9c7a5b', // camel
+      '#5a7a6e', // muted teal
+      '#7d6b5d', // driftwood
+      '#4e6b4a', // forest
     ]
 
     // Category colors (level 2) — lighter variations per parent
@@ -216,7 +231,7 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
           'd',
           `M ${pos.startX} ${pos.startY} L ${pos.bendX} ${pos.bendY} L ${pos.endX} ${pos.labelY}`,
         )
-        .attr('stroke', 'var(--color-muted-foreground, #6B7280)')
+        .attr('stroke', mutedFgColor)
         .attr('stroke-width', 1)
         .attr('fill', 'none')
         .style('opacity', 0)
@@ -232,7 +247,7 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
         .attr('dominant-baseline', 'middle')
         .style('font-size', '11px')
         .style('font-weight', '600')
-        .style('fill', 'var(--color-card-foreground, #e2e8f0)')
+        .style('fill', foregroundColor)
         .style('pointer-events', 'none')
         .style('opacity', 0)
         .text(`${pos.data.data.name} (${pos.data.value})`)
@@ -250,7 +265,7 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
       .attr('dy', '-0.15em')
       .style('font-size', '22px')
       .style('font-weight', 'bold')
-      .style('fill', 'var(--color-card-foreground, #1e293b)')
+      .style('fill', foregroundColor)
       .text(partitioned.value ?? 0)
 
     centerGroup
@@ -259,7 +274,7 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
       .attr('dy', '1.2em')
       .style('font-size', '11px')
       .style('font-weight', '500')
-      .style('fill', 'var(--color-muted-foreground, #94a3b8)')
+      .style('fill', mutedFgColor)
       .text('Total Items')
   }, [data, width, height, radius, animate, duration])
 
