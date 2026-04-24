@@ -408,36 +408,24 @@ export function MinifigDetailPage() {
   return (
     <div className="container mx-auto py-6 space-y-6" data-testid="minifig-detail-page">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={handleBack} aria-label="Back to collection">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+      <div className="flex flex-col gap-3">
+        <div>
+          <Button variant="ghost" size="sm" onClick={handleBack} aria-label="Back to collection">
+            <ArrowLeft className="mr-1 h-4 w-4" />
             Back
           </Button>
-          <div>
-            <EditableText
-              value={minifig.displayName}
-              onSave={displayName => handleUpdate({ displayName })}
-              className="text-2xl font-bold tracking-tight"
-              inputClassName="text-2xl font-bold h-auto py-0"
-              placeholder="Minifig name"
-            />
-            {minifig.variant?.legoNumber ? (
-              <p className="text-muted-foreground text-sm font-mono">
-                {minifig.variant.legoNumber}
-              </p>
-            ) : null}
-          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="destructive"
-            onClick={() => setShowDeleteDialog(true)}
-            data-testid="minifig-delete-button"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+        <div>
+          <EditableText
+            value={minifig.displayName}
+            onSave={displayName => handleUpdate({ displayName })}
+            className="text-lg md:text-2xl font-bold tracking-tight"
+            inputClassName="text-lg md:text-2xl font-bold h-auto py-0"
+            placeholder="Minifig name"
+          />
+          {minifig.variant?.legoNumber ? (
+            <p className="text-muted-foreground text-sm font-mono">{minifig.variant.legoNumber}</p>
+          ) : null}
         </div>
       </div>
 
@@ -445,7 +433,7 @@ export function MinifigDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Image */}
         <div className="lg:col-span-2">
-          <div className="max-w-md">
+          <div className="max-w-full sm:max-w-md space-y-4">
             {minifig.imageUrl || minifig.variant?.imageUrl ? (
               <img
                 src={minifig.imageUrl || minifig.variant?.imageUrl || ''}
@@ -457,6 +445,15 @@ export function MinifigDetailPage() {
                 <PersonStanding className="h-24 w-24 text-muted-foreground" />
               </div>
             )}
+            <Button
+              variant="destructive"
+              className="hidden lg:flex w-full"
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="minifig-delete-button"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
           </div>
         </div>
 
@@ -752,6 +749,17 @@ export function MinifigDetailPage() {
           ) : null}
         </div>
       </div>
+
+      {/* Mobile delete button — below all content */}
+      <Button
+        variant="destructive"
+        className="lg:hidden w-full"
+        onClick={() => setShowDeleteDialog(true)}
+        data-testid="minifig-delete-button-mobile"
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete
+      </Button>
 
       {/* Delete Dialog */}
       <ConfirmationDialog
