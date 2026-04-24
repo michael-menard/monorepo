@@ -282,7 +282,7 @@ export function MainPage() {
             setSearch(e.target.value)
             resetFilters()
           }}
-          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-64"
+          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-full sm:w-64"
           data-testid="minifig-search-input"
         />
         <div className="flex gap-1">
@@ -428,7 +428,7 @@ export function MainPage() {
 
       {/* Grid */}
       {isLoading && allItems.length === 0 ? (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
           {Array.from({ length: 20 }).map((_, i) => (
             <div key={i} className="min-w-0 overflow-hidden space-y-2">
               <Skeleton className="aspect-square rounded-lg" />
@@ -441,7 +441,7 @@ export function MainPage() {
           <p className="text-sm text-muted-foreground">
             {data?.pagination.total ?? allItems.length} minifigs
           </p>
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
             {allItems.map(minifig => (
               <div key={minifig.id} className="min-w-0 overflow-hidden">
                 <MinifigCard
@@ -459,7 +459,7 @@ export function MainPage() {
           {hasMore ? (
             <div ref={sentinelRef} className="flex justify-center py-8">
               {isFetching ? (
-                <div className="grid grid-cols-7 gap-2 w-full">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 w-full">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Skeleton className="aspect-[3/4] rounded-lg" />
