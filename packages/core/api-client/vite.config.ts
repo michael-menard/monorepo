@@ -74,6 +74,20 @@ export default defineConfig({
     },
     sourcemap: true,
   },
+  // Prevent Vite from replacing import.meta.env.VITE_* at build time.
+  // Library packages must preserve these so the consuming app resolves them at runtime.
+  define: {
+    'import.meta.env.VITE_SERVERLESS_API_BASE_URL': 'import.meta.env.VITE_SERVERLESS_API_BASE_URL',
+    'import.meta.env.VITE_SERVERLESS_API_TIMEOUT': 'import.meta.env.VITE_SERVERLESS_API_TIMEOUT',
+    'import.meta.env.VITE_SERVERLESS_API_RETRY_ATTEMPTS':
+      'import.meta.env.VITE_SERVERLESS_API_RETRY_ATTEMPTS',
+    'import.meta.env.VITE_SERVERLESS_API_RETRY_DELAY':
+      'import.meta.env.VITE_SERVERLESS_API_RETRY_DELAY',
+    'import.meta.env.VITE_SERVERLESS_API_MAX_RETRY_DELAY':
+      'import.meta.env.VITE_SERVERLESS_API_MAX_RETRY_DELAY',
+    'import.meta.env.VITE_SERVERLESS_CONNECTION_WARMING':
+      'import.meta.env.VITE_SERVERLESS_CONNECTION_WARMING',
+  },
   test: {
     globals: true,
     environment: 'jsdom',

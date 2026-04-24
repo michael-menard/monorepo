@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import {
-  LoadingSpinner,
-  cn,
-  AppTabs,
-  AppTabsList,
-  AppTabsTrigger,
-} from '@repo/app-component-library'
+import { LoadingSpinner, AppTabs, AppTabsList, AppTabsTrigger } from '@repo/app-component-library'
 import {
   LayoutDashboard,
   BookOpen,
@@ -38,28 +32,6 @@ const mainNavItems = [
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
   { id: 'procurement', label: 'Build Planner', href: '/procurement', icon: ShoppingCart },
 ]
-
-// LEGO brick building animation for loading states
-const legoBrickVariants = {
-  initial: { scale: 0, rotate: -180, opacity: 0 },
-  animate: {
-    scale: 1,
-    rotate: 0,
-    opacity: 1,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 260,
-      damping: 20,
-      delay: 0.1,
-    },
-  },
-  exit: {
-    scale: 0,
-    rotate: 180,
-    opacity: 0,
-    transition: { duration: 0.2 },
-  },
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Unauthenticated Layout — no header, no footer, no navigation
@@ -126,8 +98,8 @@ function AuthenticatedLayout({
         {/* Navigation tabs — hidden on mobile, shown on md+ */}
         <div className="hidden md:block shrink-0 border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <AppTabs value={activeTab} onValueChange={onTabChange}>
-              <AppTabsList variant="underline" className="h-11 w-full justify-start">
+            <AppTabs value={activeTab} onValueChange={onTabChange} activationMode="manual">
+              <AppTabsList variant="underline" className="h-11 w-full justify-start font-sans">
                 {mainNavItems.map(item => {
                   const Icon = item.icon
                   return (
@@ -178,34 +150,10 @@ function AuthenticatedLayout({
 
 function LoadingLayout() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-teal-50 dark:from-sky-950 dark:to-teal-950">
-      <div className="text-center space-y-6">
-        <div className="flex justify-center gap-2">
-          {[...Array(4)].map((_, i) => (
-            <motion.div
-              key={i}
-              className={cn(
-                'h-8 w-8 rounded-lg shadow-lg flex items-center justify-center',
-                i === 0 && 'bg-red-500',
-                i === 1 && 'bg-blue-500',
-                i === 2 && 'bg-yellow-500',
-                i === 3 && 'bg-green-500',
-              )}
-              variants={legoBrickVariants}
-              initial="initial"
-              animate="animate"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            >
-              <div className="h-3 w-3 rounded-full bg-white/80 shadow-inner"></div>
-            </motion.div>
-          ))}
-        </div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-          <LoadingSpinner size="lg" className="text-sky-500" />
-          <p className="text-muted-foreground mt-4 font-medium">
-            Building your LEGO MOC experience...
-          </p>
-        </motion.div>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <LoadingSpinner size="lg" className="text-primary" />
+        <p className="font-body text-sm text-muted-foreground">Loading&hellip;</p>
       </div>
     </div>
   )
