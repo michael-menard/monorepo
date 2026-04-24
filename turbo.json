@@ -23,7 +23,7 @@
       "inputs": ["$TURBO_DEFAULT$", "tsconfig*.json"]
     },
     "dev": {
-      "dependsOn": ["//#infra:up"],
+      "dependsOn": ["//#infra:up", "^build"],
       "cache": false,
       "persistent": true
     },

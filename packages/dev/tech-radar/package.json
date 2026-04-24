@@ -2,14 +2,15 @@
   "name": "@repo/tech-radar",
   "version": "1.0.0",
   "description": "Interactive Tech Radar for the monorepo",
-  "main": "./src/index.tsx",
-  "types": "./src/index.tsx",
+  "main": "./dist/tech-radar.umd.js",
+  "module": "./dist/tech-radar.mjs",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./src/index.tsx",
-      "require": "./dist/tech-radar.js",
-      "types": "./src/index.tsx"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/tech-radar.mjs",
+      "require": "./dist/tech-radar.umd.js"
     }
   },
   "scripts": {
@@ -46,6 +47,7 @@
     "tsx": "^4.6.2",
     "typescript": "5.8.3",
     "vite": "^5.2.10",
+    "vite-plugin-dts": "4.5.4",
     "vitest": "^3.2.4"
   },
   "peerDependencies": {

@@ -1,11 +1,18 @@
 import { resolve } from 'path'
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
+import dts from 'vite-plugin-dts'
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    dts({
+      insertTypesEntry: true,
+      exclude: ['**/*.test.ts', '**/*.test.tsx', 'src/__tests__/**'],
+    }),
+  ],
   resolve: {
     alias: isTest
       ? {

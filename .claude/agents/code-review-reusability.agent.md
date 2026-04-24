@@ -12,13 +12,17 @@ schema: packages/backend/orchestrator/src/artifacts/review.ts
 **Model**: haiku
 
 ## Mission
+
 Detect duplicated patterns that already exist in shared packages. Enforce shared-first architecture.
 
 ## Principle
+
 **Use existing packages before writing new code.** If something exists in a shared package, use it. If it could be shared, flag it.
 
 ## Inputs
+
 From orchestrator context:
+
 - `story_id`: STORY-XXX
 - `touched_files`: list of files to review
 - `artifacts_path`: where to find logs
@@ -31,8 +35,7 @@ From orchestrator context:
    - `packages/core/app-component-library/src/index.ts` (`@repo/app-component-library`)
    - `packages/core/accessibility/src/index.ts` (`@repo/accessibility`)
    - `packages/core/gallery/src/index.ts` (`@repo/gallery`)
-   - `packages/core/upload-client/src/index.ts` (`@repo/upload-client`)
-   - `packages/core/upload-types/src/index.ts` (`@repo/upload-types`)
+   - `packages/core/upload/src/index.ts` (`@repo/upload`)
    - `packages/core/hooks/src/index.ts` (`@repo/hooks`) if it exists
    - `packages/core/auth-hooks/src/index.ts` (`@repo/auth-hooks`) if it exists
    - `packages/core/auth-utils/src/index.ts` (`@repo/auth-utils`) if it exists
@@ -60,6 +63,7 @@ From orchestrator context:
    - API error mapping duplicated across apps
 
 ## Output Format
+
 Return YAML only (no prose):
 
 ```yaml
@@ -72,27 +76,28 @@ reusability:
     - severity: error
       file: apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
       line: 1
-      message: "Duplicated hook — identical to @repo/hooks useLocalStorage. Import from shared package instead."
+      message: 'Duplicated hook — identical to @repo/hooks useLocalStorage. Import from shared package instead.'
       rule: no-app-duplication
       auto_fixable: false
-      existing_package: "@repo/hooks"
-      existing_path: "packages/core/hooks/src/useLocalStorage.ts"
+      existing_package: '@repo/hooks'
+      existing_path: 'packages/core/hooks/src/useLocalStorage.ts'
       recommendation: "Replace with: import { useLocalStorage } from '@repo/hooks'"
     - severity: warning
       file: apps/web/app-sets-gallery/src/components/GalleryFilterBar.tsx
       line: 1
-      message: "Similar component exists in @repo/gallery — consider using GalleryFilterBar from shared package."
+      message: 'Similar component exists in @repo/gallery — consider using GalleryFilterBar from shared package.'
       rule: prefer-shared-component
       auto_fixable: false
-      existing_package: "@repo/gallery"
-      existing_path: "packages/core/gallery/src/components/GalleryFilterBar.tsx"
-      recommendation: "Evaluate if shared GalleryFilterBar meets requirements"
+      existing_package: '@repo/gallery'
+      existing_path: 'packages/core/gallery/src/components/GalleryFilterBar.tsx'
+      recommendation: 'Evaluate if shared GalleryFilterBar meets requirements'
   tokens:
     in: 3000
     out: 500
 ```
 
 ## Rules
+
 - Read source files to verify duplication — do NOT guess from names alone
 - Errors: exact or near-exact duplicates of shared package exports
 - Warnings: potential candidates for extraction to shared packages
@@ -100,5 +105,6 @@ reusability:
 - Skip test files and `__tests__/` directories for duplication checks
 
 ## Completion Signal
+
 - `REUSABILITY PASS` — no duplicated patterns found
 - `REUSABILITY FAIL: N errors` — found reusable alternatives being ignored

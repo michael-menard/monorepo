@@ -6,64 +6,64 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./src/schemas/cache.ts",
-      "types": "./src/schemas/cache.ts"
+      "types": "./dist/schemas/cache.d.ts",
+      "import": "./dist/schemas/cache.js"
     },
     "./utils/memoryCache": {
-      "import": "./src/utils/memoryCache.ts",
-      "types": "./src/utils/memoryCache.ts"
+      "types": "./dist/utils/memoryCache.d.ts",
+      "import": "./dist/utils/memoryCache.js"
     },
     "./utils/storageCache": {
-      "import": "./src/utils/storageCache.ts",
-      "types": "./src/utils/storageCache.ts"
+      "types": "./dist/utils/storageCache.d.ts",
+      "import": "./dist/utils/storageCache.js"
     },
     "./utils/imageCache": {
-      "import": "./src/utils/imageCache.ts",
-      "types": "./src/utils/imageCache.ts"
+      "types": "./dist/utils/imageCache.d.ts",
+      "import": "./dist/utils/imageCache.js"
     },
     "./utils/rtkQueryCache": {
-      "import": "./src/utils/rtkQueryCache.ts",
-      "types": "./src/utils/rtkQueryCache.ts"
+      "types": "./dist/utils/rtkQueryCache.d.ts",
+      "import": "./dist/utils/rtkQueryCache.js"
     },
     "./utils/serverlessCache": {
-      "import": "./src/utils/serverlessCache.ts",
-      "types": "./src/utils/serverlessCache.ts"
-    },
-    "./managers/IntelligentCacheManager": {
-      "import": "./src/managers/IntelligentCacheManager.ts",
-      "types": "./src/managers/IntelligentCacheManager.ts"
-    },
-    "./rtk/IntelligentRTKCacheEnhancer": {
-      "import": "./src/rtk/IntelligentRTKCacheEnhancer.ts",
-      "types": "./src/rtk/IntelligentRTKCacheEnhancer.ts"
-    },
-    "./analytics/CacheAnalytics": {
-      "import": "./src/analytics/CacheAnalytics.ts",
-      "types": "./src/analytics/CacheAnalytics.ts"
+      "types": "./dist/utils/serverlessCache.d.ts",
+      "import": "./dist/utils/serverlessCache.js"
     },
     "./utils/performanceMonitor": {
-      "import": "./src/utils/performanceMonitor.ts",
-      "types": "./src/utils/performanceMonitor.ts"
+      "types": "./dist/utils/performanceMonitor.d.ts",
+      "import": "./dist/utils/performanceMonitor.js"
     },
     "./utils/serverlessCacheManager": {
-      "import": "./src/utils/serverlessCacheManager.ts",
-      "types": "./src/utils/serverlessCacheManager.ts"
+      "types": "./dist/utils/serverlessCacheManager.d.ts",
+      "import": "./dist/utils/serverlessCacheManager.js"
+    },
+    "./managers/IntelligentCacheManager": {
+      "types": "./dist/managers/IntelligentCacheManager.d.ts",
+      "import": "./dist/managers/IntelligentCacheManager.js"
+    },
+    "./rtk/IntelligentRTKCacheEnhancer": {
+      "types": "./dist/rtk/IntelligentRTKCacheEnhancer.d.ts",
+      "import": "./dist/rtk/IntelligentRTKCacheEnhancer.js"
+    },
+    "./analytics/CacheAnalytics": {
+      "types": "./dist/analytics/CacheAnalytics.d.ts",
+      "import": "./dist/analytics/CacheAnalytics.js"
     },
     "./hooks/useServerlessCache": {
-      "import": "./src/hooks/useServerlessCache.ts",
-      "types": "./src/hooks/useServerlessCache.ts"
+      "types": "./dist/hooks/useServerlessCache.d.ts",
+      "import": "./dist/hooks/useServerlessCache.js"
     },
     "./hooks/useIntelligentCache": {
-      "import": "./src/hooks/useIntelligentCache.ts",
-      "types": "./src/hooks/useIntelligentCache.ts"
+      "types": "./dist/hooks/useIntelligentCache.d.ts",
+      "import": "./dist/hooks/useIntelligentCache.js"
     },
     "./schemas/cache": {
-      "import": "./src/schemas/cache.ts",
-      "types": "./src/schemas/cache.ts"
+      "types": "./dist/schemas/cache.d.ts",
+      "import": "./dist/schemas/cache.js"
     }
   },
   "scripts": {
-    "build": "vite build && tsc -p tsconfig.build.json",
+    "build": "vite build",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:run": "vitest run",
@@ -96,6 +96,7 @@
     "react-dom": "^19.1.0",
     "typescript": "5.8.3",
     "vite": "^5.2.10",
+    "vite-plugin-dts": "4.5.4",
     "vitest": "^3.0.5"
   }
 }

@@ -4,37 +4,126 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./inputs/AppInput": "./src/inputs/AppInput.tsx",
-    "./inputs/AppLabel": "./src/inputs/AppLabel.tsx",
-    "./inputs/AppSelect": "./src/inputs/AppSelect.tsx",
-    "./inputs/AppTextarea": "./src/inputs/AppTextarea.tsx",
-    "./forms/AppForm": "./src/forms/AppForm.tsx",
-    "./forms/FormSection": "./src/forms/FormSection.tsx",
-    "./forms/form-error-message": "./src/forms/form-error-message.tsx",
-    "./forms/validation-messages": "./src/forms/validation-messages.ts",
-    "./cards/AppCard": "./src/cards/AppCard.tsx",
-    "./cards/stats-cards": "./src/cards/stats-cards.tsx",
-    "./avatars/AppAvatar": "./src/avatars/AppAvatar.tsx",
-    "./feedback/skeleton": "./src/feedback/skeleton.tsx",
-    "./feedback/empty-states": "./src/feedback/empty-states.tsx",
-    "./feedback/loading-spinner": "./src/feedback/loading-spinner/index.tsx",
-    "./feedback/progress-indicator": "./src/feedback/progress-indicator.tsx",
-    "./errors/error-boundary": "./src/errors/error-boundary.tsx",
-    "./errors/error-boundary-specialized": "./src/errors/error-boundary-specialized.tsx",
-    "./notifications/sonner": "./src/notifications/sonner.tsx",
-    "./notifications/toast-utils": "./src/notifications/toast-utils.tsx",
-    "./selects/multi-select": "./src/selects/multi-select.tsx",
-    "./dialogs/ConfirmationDialog": "./src/dialogs/ConfirmationDialog.tsx",
-    "./data/AppDataTable": "./src/data/AppDataTable.tsx",
-    "./data/TabPanel": "./src/data/TabPanel.tsx",
-    "./content/AppSafeContent": "./src/content/AppSafeContent.tsx",
-    "./content/PageHeader": "./src/content/PageHeader.tsx",
-    "./buttons/custom-button": "./src/buttons/custom-button.tsx",
-    "./tour/guided-tour": "./src/tour/guided-tour.tsx",
-    "./hooks/useLoadingStates": "./src/hooks/useLoadingStates.ts",
-    "./hooks/useToast": "./src/hooks/useToast.ts",
-    "./lib/sanitization": "./src/lib/sanitization.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./inputs/AppInput": {
+      "types": "./dist/inputs/AppInput.d.ts",
+      "import": "./dist/inputs/AppInput.js"
+    },
+    "./inputs/AppLabel": {
+      "types": "./dist/inputs/AppLabel.d.ts",
+      "import": "./dist/inputs/AppLabel.js"
+    },
+    "./inputs/AppSelect": {
+      "types": "./dist/inputs/AppSelect.d.ts",
+      "import": "./dist/inputs/AppSelect.js"
+    },
+    "./inputs/AppTextarea": {
+      "types": "./dist/inputs/AppTextarea.d.ts",
+      "import": "./dist/inputs/AppTextarea.js"
+    },
+    "./forms/AppForm": {
+      "types": "./dist/forms/AppForm.d.ts",
+      "import": "./dist/forms/AppForm.js"
+    },
+    "./forms/FormSection": {
+      "types": "./dist/forms/FormSection.d.ts",
+      "import": "./dist/forms/FormSection.js"
+    },
+    "./forms/form-error-message": {
+      "types": "./dist/forms/form-error-message.d.ts",
+      "import": "./dist/forms/form-error-message.js"
+    },
+    "./forms/validation-messages": {
+      "types": "./dist/forms/validation-messages.d.ts",
+      "import": "./dist/forms/validation-messages.js"
+    },
+    "./cards/stats-cards": {
+      "types": "./dist/cards/stats-cards.d.ts",
+      "import": "./dist/cards/stats-cards.js"
+    },
+    "./avatars/AppAvatar": {
+      "types": "./dist/avatars/AppAvatar.d.ts",
+      "import": "./dist/avatars/AppAvatar.js"
+    },
+    "./feedback/skeleton": {
+      "types": "./dist/feedback/skeleton.d.ts",
+      "import": "./dist/feedback/skeleton.js"
+    },
+    "./feedback/empty-states": {
+      "types": "./dist/feedback/empty-states.d.ts",
+      "import": "./dist/feedback/empty-states.js"
+    },
+    "./feedback/loading-spinner": {
+      "types": "./dist/feedback/loading-spinner.d.ts",
+      "import": "./dist/feedback/loading-spinner.js"
+    },
+    "./feedback/progress-indicator": {
+      "types": "./dist/feedback/progress-indicator.d.ts",
+      "import": "./dist/feedback/progress-indicator.js"
+    },
+    "./errors/error-boundary": {
+      "types": "./dist/errors/error-boundary.d.ts",
+      "import": "./dist/errors/error-boundary.js"
+    },
+    "./errors/error-boundary-specialized": {
+      "types": "./dist/errors/error-boundary-specialized.d.ts",
+      "import": "./dist/errors/error-boundary-specialized.js"
+    },
+    "./notifications/sonner": {
+      "types": "./dist/notifications/sonner.d.ts",
+      "import": "./dist/notifications/sonner.js"
+    },
+    "./notifications/toast-utils": {
+      "types": "./dist/notifications/toast-utils.d.ts",
+      "import": "./dist/notifications/toast-utils.js"
+    },
+    "./selects/multi-select": {
+      "types": "./dist/selects/multi-select.d.ts",
+      "import": "./dist/selects/multi-select.js"
+    },
+    "./dialogs/ConfirmationDialog": {
+      "types": "./dist/dialogs/ConfirmationDialog.d.ts",
+      "import": "./dist/dialogs/ConfirmationDialog.js"
+    },
+    "./data/AppDataTable": {
+      "types": "./dist/data/AppDataTable.d.ts",
+      "import": "./dist/data/AppDataTable.js"
+    },
+    "./data/TabPanel": {
+      "types": "./dist/data/TabPanel.d.ts",
+      "import": "./dist/data/TabPanel.js"
+    },
+    "./content/AppSafeContent": {
+      "types": "./dist/content/AppSafeContent.d.ts",
+      "import": "./dist/content/AppSafeContent.js"
+    },
+    "./content/PageHeader": {
+      "types": "./dist/content/PageHeader.d.ts",
+      "import": "./dist/content/PageHeader.js"
+    },
+    "./buttons/custom-button": {
+      "types": "./dist/buttons/custom-button.d.ts",
+      "import": "./dist/buttons/custom-button.js"
+    },
+    "./tour/guided-tour": {
+      "types": "./dist/tour/guided-tour.d.ts",
+      "import": "./dist/tour/guided-tour.js"
+    },
+    "./hooks/useLoadingStates": {
+      "types": "./dist/hooks/useLoadingStates.d.ts",
+      "import": "./dist/hooks/useLoadingStates.js"
+    },
+    "./hooks/useToast": {
+      "types": "./dist/hooks/useToast.d.ts",
+      "import": "./dist/hooks/useToast.js"
+    },
+    "./lib/sanitization": {
+      "types": "./dist/lib/sanitization.d.ts",
+      "import": "./dist/lib/sanitization.js"
+    }
   },
   "scripts": {
     "lint": "eslint --fix . --fix --max-warnings 0",

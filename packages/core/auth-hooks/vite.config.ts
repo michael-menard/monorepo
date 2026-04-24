@@ -1,11 +1,18 @@
 import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
+import dts from 'vite-plugin-dts'
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    dts({
+      insertTypesEntry: true,
+      exclude: ['**/*.test.ts', '**/*.test.tsx', 'src/__tests__/**', 'src/test/**'],
+    }),
+  ],
   define: isTest
     ? {
         'import.meta.env.VITE_SERVERLESS_API_BASE_URL': JSON.stringify('http://localhost:3001'),

@@ -54,6 +54,7 @@ export default defineConfig(({ mode }) => {
 
           // App components - feedback
           'feedback/skeleton': path.resolve(__dirname, 'src/feedback/skeleton.tsx'),
+          'feedback/empty-states': path.resolve(__dirname, 'src/feedback/empty-states.tsx'),
           'feedback/loading-spinner': path.resolve(
             __dirname,
             'src/feedback/loading-spinner/index.tsx',

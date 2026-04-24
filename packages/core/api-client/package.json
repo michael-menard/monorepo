@@ -5,172 +5,172 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./client/serverless-client": {
-      "import": "./src/client/serverless-client.ts",
-      "types": "./src/client/serverless-client.ts"
+      "types": "./dist/client/serverless-client.d.ts",
+      "import": "./dist/client/serverless-client.js"
     },
     "./rtk/base-query": {
-      "import": "./src/rtk/base-query.ts",
-      "types": "./src/rtk/base-query.ts"
+      "types": "./dist/rtk/base-query.d.ts",
+      "import": "./dist/rtk/base-query.js"
     },
     "./rtk/gallery-api": {
-      "import": "./src/rtk/gallery-api.ts",
-      "types": "./src/rtk/gallery-api.ts"
+      "types": "./dist/rtk/gallery-api.d.ts",
+      "import": "./dist/rtk/gallery-api.js"
     },
     "./rtk/wishlist-api": {
-      "import": "./src/rtk/wishlist-api.ts",
-      "types": "./src/rtk/wishlist-api.ts"
+      "types": "./dist/rtk/wishlist-api.d.ts",
+      "import": "./dist/rtk/wishlist-api.js"
     },
     "./rtk/wishlist-gallery-api": {
-      "import": "./src/rtk/wishlist-gallery-api.ts",
-      "types": "./src/rtk/wishlist-gallery-api.ts"
+      "types": "./dist/rtk/wishlist-gallery-api.d.ts",
+      "import": "./dist/rtk/wishlist-gallery-api.js"
     },
     "./rtk/sets-api": {
-      "import": "./src/rtk/sets-api.ts",
-      "types": "./src/rtk/sets-api.ts"
+      "types": "./dist/rtk/sets-api.d.ts",
+      "import": "./dist/rtk/sets-api.js"
     },
     "./rtk/minifigs-api": {
-      "import": "./src/rtk/minifigs-api.ts",
-      "types": "./src/rtk/minifigs-api.ts"
-    },
-    "./schemas/wishlist": {
-      "import": "./src/schemas/wishlist.ts",
-      "types": "./src/schemas/wishlist.ts"
-    },
-    "./schemas/instructions": {
-      "import": "./src/schemas/instructions/index.ts",
-      "types": "./src/schemas/instructions/index.ts"
-    },
-    "./schemas/instructions/form": {
-      "import": "./src/schemas/instructions/form.ts",
-      "types": "./src/schemas/instructions/form.ts"
-    },
-    "./schemas/instructions/api": {
-      "import": "./src/schemas/instructions/api.ts",
-      "types": "./src/schemas/instructions/api.ts"
-    },
-    "./schemas/instructions/utils": {
-      "import": "./src/schemas/instructions/utils.ts",
-      "types": "./src/schemas/instructions/utils"
-    },
-    "./schemas/sets": {
-      "import": "./src/schemas/sets.ts",
-      "types": "./src/schemas/sets.ts"
-    },
-    "./schemas/minifigs": {
-      "import": "./src/schemas/minifigs.ts",
-      "types": "./src/schemas/minifigs.ts"
-    },
-    "./schemas/feature-flags": {
-      "import": "./src/schemas/feature-flags.ts",
-      "types": "./src/schemas/feature-flags.ts"
+      "types": "./dist/rtk/minifigs-api.d.ts",
+      "import": "./dist/rtk/minifigs-api.js"
     },
     "./rtk/dashboard-api": {
-      "import": "./src/rtk/dashboard-api.ts",
-      "types": "./src/rtk/dashboard-api.ts"
+      "types": "./dist/rtk/dashboard-api.d.ts",
+      "import": "./dist/rtk/dashboard-api.js"
     },
     "./rtk/instructions-api": {
-      "import": "./src/rtk/instructions-api.ts",
-      "types": "./src/rtk/instructions-api.ts"
+      "types": "./dist/rtk/instructions-api.d.ts",
+      "import": "./dist/rtk/instructions-api.js"
     },
     "./rtk/permissions-api": {
-      "import": "./src/rtk/permissions-api.ts",
-      "types": "./src/rtk/permissions-api.ts"
+      "types": "./dist/rtk/permissions-api.d.ts",
+      "import": "./dist/rtk/permissions-api.js"
     },
     "./rtk/admin-api": {
-      "import": "./src/rtk/admin-api.ts",
-      "types": "./src/rtk/admin-api.ts"
+      "types": "./dist/rtk/admin-api.d.ts",
+      "import": "./dist/rtk/admin-api.js"
     },
     "./rtk/inspiration-api": {
-      "import": "./src/rtk/inspiration-api.ts",
-      "types": "./src/rtk/inspiration-api.ts"
+      "types": "./dist/rtk/inspiration-api.d.ts",
+      "import": "./dist/rtk/inspiration-api.js"
     },
     "./rtk/user-profile-api": {
-      "import": "./src/rtk/user-profile-api.ts",
-      "types": "./src/rtk/user-profile-api.ts"
+      "types": "./dist/rtk/user-profile-api.d.ts",
+      "import": "./dist/rtk/user-profile-api.js"
     },
     "./rtk/scraper-api": {
-      "import": "./src/rtk/scraper-api.ts",
-      "types": "./src/rtk/scraper-api.ts"
-    },
-    "./schemas/scraper": {
-      "import": "./src/schemas/scraper.ts",
-      "types": "./src/schemas/scraper.ts"
-    },
-    "./schemas/inspiration": {
-      "import": "./src/schemas/inspiration.ts",
-      "types": "./src/schemas/inspiration.ts"
-    },
-    "./schemas/admin": {
-      "import": "./src/schemas/admin.ts",
-      "types": "./src/schemas/admin.ts"
-    },
-    "./schemas/permissions": {
-      "import": "./src/schemas/permissions.ts",
-      "types": "./src/schemas/permissions.ts"
-    },
-    "./auth/cognito-integration": {
-      "import": "./src/auth/cognito-integration.ts",
-      "types": "./src/auth/cognito-integration.ts"
-    },
-    "./auth/auth-middleware": {
-      "import": "./src/auth/auth-middleware.ts",
-      "types": "./src/auth/auth-middleware.ts"
-    },
-    "./auth/rtk-auth-integration": {
-      "import": "./src/auth/rtk-auth-integration.ts",
-      "types": "./src/auth/rtk-auth-integration.ts"
-    },
-    "./retry/retry-logic": {
-      "import": "./src/retry/retry-logic.ts",
-      "types": "./src/retry/retry-logic.ts"
-    },
-    "./config/environments": {
-      "import": "./src/config/environments.ts",
-      "types": "./src/config/environments.ts"
-    },
-    "./config/endpoints": {
-      "import": "./src/config/endpoints.ts",
-      "types": "./src/config/endpoints.ts"
-    },
-    "./types/api-responses": {
-      "import": "./src/types/api-responses.ts",
-      "types": "./src/types/api-responses.ts"
-    },
-    "./utils/authorization-errors": {
-      "import": "./src/utils/authorization-errors.ts",
-      "types": "./src/utils/authorization-errors.ts"
-    },
-    "./errors/error-mapping": {
-      "import": "./src/errors/error-mapping.ts",
-      "types": "./src/errors/error-mapping.ts"
-    },
-    "./errors/auth-failure": {
-      "import": "./src/errors/auth-failure.ts",
-      "types": "./src/errors/auth-failure.ts"
+      "types": "./dist/rtk/scraper-api.d.ts",
+      "import": "./dist/rtk/scraper-api.js"
     },
     "./rtk/uploads-api": {
-      "import": "./src/rtk/uploads-api.ts",
-      "types": "./src/rtk/uploads-api.ts"
-    },
-    "./schemas/uploads": {
-      "import": "./src/schemas/uploads.ts",
-      "types": "./src/schemas/uploads.ts"
+      "types": "./dist/rtk/uploads-api.d.ts",
+      "import": "./dist/rtk/uploads-api.js"
     },
     "./rtk/procurement-api": {
-      "import": "./src/rtk/procurement-api.ts",
-      "types": "./src/rtk/procurement-api.ts"
-    },
-    "./schemas/procurement": {
-      "import": "./src/schemas/procurement.ts",
-      "types": "./src/schemas/procurement.ts"
+      "types": "./dist/rtk/procurement-api.d.ts",
+      "import": "./dist/rtk/procurement-api.js"
     },
     "./rtk/recommender-api": {
-      "import": "./src/rtk/recommender-api.ts",
-      "types": "./src/rtk/recommender-api.ts"
+      "types": "./dist/rtk/recommender-api.d.ts",
+      "import": "./dist/rtk/recommender-api.js"
+    },
+    "./schemas/wishlist": {
+      "types": "./dist/schemas/wishlist.d.ts",
+      "import": "./dist/schemas/wishlist.js"
+    },
+    "./schemas/instructions": {
+      "types": "./dist/schemas/instructions/index.d.ts",
+      "import": "./dist/schemas/instructions/index.js"
+    },
+    "./schemas/instructions/form": {
+      "types": "./dist/schemas/instructions/form.d.ts",
+      "import": "./dist/schemas/instructions/form.js"
+    },
+    "./schemas/instructions/api": {
+      "types": "./dist/schemas/instructions/api.d.ts",
+      "import": "./dist/schemas/instructions/api.js"
+    },
+    "./schemas/instructions/utils": {
+      "types": "./dist/schemas/instructions/utils.d.ts",
+      "import": "./dist/schemas/instructions/utils.js"
+    },
+    "./schemas/sets": {
+      "types": "./dist/schemas/sets.d.ts",
+      "import": "./dist/schemas/sets.js"
+    },
+    "./schemas/minifigs": {
+      "types": "./dist/schemas/minifigs.d.ts",
+      "import": "./dist/schemas/minifigs.js"
+    },
+    "./schemas/feature-flags": {
+      "types": "./dist/schemas/feature-flags.d.ts",
+      "import": "./dist/schemas/feature-flags.js"
+    },
+    "./schemas/scraper": {
+      "types": "./dist/schemas/scraper.d.ts",
+      "import": "./dist/schemas/scraper.js"
+    },
+    "./schemas/inspiration": {
+      "types": "./dist/schemas/inspiration.d.ts",
+      "import": "./dist/schemas/inspiration.js"
+    },
+    "./schemas/admin": {
+      "types": "./dist/schemas/admin.d.ts",
+      "import": "./dist/schemas/admin.js"
+    },
+    "./schemas/permissions": {
+      "types": "./dist/schemas/permissions.d.ts",
+      "import": "./dist/schemas/permissions.js"
+    },
+    "./schemas/uploads": {
+      "types": "./dist/schemas/uploads.d.ts",
+      "import": "./dist/schemas/uploads.js"
+    },
+    "./schemas/procurement": {
+      "types": "./dist/schemas/procurement.d.ts",
+      "import": "./dist/schemas/procurement.js"
+    },
+    "./auth/cognito-integration": {
+      "types": "./dist/auth/cognito-integration.d.ts",
+      "import": "./dist/auth/cognito-integration.js"
+    },
+    "./auth/auth-middleware": {
+      "types": "./dist/auth/auth-middleware.d.ts",
+      "import": "./dist/auth/auth-middleware.js"
+    },
+    "./auth/rtk-auth-integration": {
+      "types": "./dist/auth/rtk-auth-integration.d.ts",
+      "import": "./dist/auth/rtk-auth-integration.js"
+    },
+    "./retry/retry-logic": {
+      "types": "./dist/retry/retry-logic.d.ts",
+      "import": "./dist/retry/retry-logic.js"
+    },
+    "./config/environments": {
+      "types": "./dist/config/environments.d.ts",
+      "import": "./dist/config/environments.js"
+    },
+    "./config/endpoints": {
+      "types": "./dist/config/endpoints.d.ts",
+      "import": "./dist/config/endpoints.js"
+    },
+    "./types/api-responses": {
+      "types": "./dist/types/api-responses.d.ts",
+      "import": "./dist/types/api-responses.js"
+    },
+    "./utils/authorization-errors": {
+      "types": "./dist/utils/authorization-errors.d.ts",
+      "import": "./dist/utils/authorization-errors.js"
+    },
+    "./errors/error-mapping": {
+      "types": "./dist/errors/error-mapping.d.ts",
+      "import": "./dist/errors/error-mapping.js"
+    },
+    "./errors/auth-failure": {
+      "types": "./dist/errors/auth-failure.d.ts",
+      "import": "./dist/errors/auth-failure.js"
     }
   },
   "scripts": {

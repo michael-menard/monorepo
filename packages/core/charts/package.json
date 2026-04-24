@@ -2,9 +2,9 @@
   "name": "@repo/charts",
   "version": "1.0.0",
   "description": "Reusable D3.js chart components",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
@@ -31,9 +31,9 @@
   },
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "require": "./dist/index.js",
-      "types": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "files": [

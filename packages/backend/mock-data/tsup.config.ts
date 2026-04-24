@@ -6,6 +6,7 @@ export default defineConfig({
     wishlist: 'src/wishlist.ts',
     'moc-instructions': 'src/moc-instructions.ts',
     profile: 'src/profile.ts',
+    store: 'src/store.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
