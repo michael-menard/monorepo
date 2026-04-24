@@ -4,14 +4,24 @@
 
 ## Overview
 
-This package provides the complete design system for the LEGO MOC Inventory application, implementing the nature-inspired aesthetic defined in the frontend specification.
+This package provides the complete design system for the LEGO MOC Inventory application, implementing the Dark Academia aesthetic.
 
 ### Design Philosophy
 
-- **Nature-Inspired** - Earthy, calming colors (teal, sage, taupe) that evoke natural landscapes
-- **Clean & Modern** - Minimalist approach that lets LEGO imagery shine
+- **Dark Academia** - Warm earth tones, forest greens, and burgundy accents inspired by old libraries and scholarly elegance
+- **Dual-Theme** - Light mode (warm cream, olive green, sand beige) and dark mode (deep charcoal, forest green, burgundy)
 - **Approachable & Inviting** - Warm tones that feel welcoming, not sterile
 - **Accessible** - WCAG 2.1 AA compliant color contrasts and interaction patterns
+
+### Design System Reference
+
+The interactive design system site lives at `apps/web/app-design-system` and serves as the canonical visual reference:
+
+```bash
+pnpm --filter @repo/app-design-system dev   # http://localhost:8036
+```
+
+Pages: Typography, Colors, Layout, Components, Patterns, Style Guide
 
 ## Installation
 
@@ -44,47 +54,56 @@ export default {
 
 ### Color Palette
 
-#### Primary - Teal Family
-- **Teal 600** `#1B5E6D` - Primary buttons, headers, key elements
-- **Teal 400** `#5FA3B8` - Secondary interactive elements, dark mode primary
-- **Teal 800** `#0F4654` - Hover states, emphasis
-- **Teal 950** `#082B34` - Dark mode backgrounds
+Colors use oklch for perceptual uniformity. See `apps/web/app-design-system/app/globals.css` for exact values.
 
-#### Accent - Sage/Green Family
-- **Sage 500** `#A8B8A3` - Accents, highlights, focus states
-- **Forest Green 900** `#2D5F4F` - Success states, confirmations
+#### Light Mode (Dark Academia Light)
 
-#### Neutral - Taupe/Earth Family
-- **Neutral 100** `#F5F1ED` - Light mode primary background
-- **Neutral 50** `#F9F7F5` - Light mode secondary background
-- **Neutral 500** `#9B8B7E` - Secondary text
-- **Neutral 900** `#2C2C2C` - Primary text (charcoal)
+- **Background** `oklch(0.95 0.015 85)` - Warm cream
+- **Foreground** `oklch(0.32 0.015 145)` - Dark olive-gray
+- **Primary** `oklch(0.40 0.06 135)` - Darker olive green
+- **Secondary** `oklch(0.85 0.02 80)` - Sand beige
+- **Accent** `oklch(0.72 0.04 140)` - Soft sage
+- **Destructive** `oklch(0.48 0.14 25)` - Darker burgundy
+- **Muted** `oklch(0.88 0.018 80)` - Lighter sand
 
-#### Semantic Colors
-- **Success** `#2D5F4F` - Forest Green
-- **Warning** `#D4A574` - Warm Ochre
-- **Error** `#A85B4B` - Terracotta Red
-- **Info** `#5FA3B8` - Soft Teal
+#### Dark Mode (Dark Academia Dark)
+
+- **Background** `oklch(0.18 0.012 55)` - Deep warm charcoal
+- **Foreground** `oklch(0.93 0.012 80)` - Brighter warm cream
+- **Primary** `oklch(0.55 0.10 160)` - Brighter forest green
+- **Secondary** `oklch(0.30 0.018 55)` - Urbane Bronze warm brown
+- **Accent** `oklch(0.55 0.14 25)` - Brighter burgundy
+- **Destructive** `oklch(0.55 0.16 25)` - Brighter burgundy for visibility
+
+#### Chart Colors
+
+Five theme-coordinated chart colors available as `--chart-1` through `--chart-5`.
 
 ### Typography
 
 **Font Families:**
-- **Primary:** Geist (sans-serif) - Clean, modern, highly legible
-- **Monospace:** Geist Mono - For code, part numbers, technical data
 
-**Type Scale:**
-- **H1:** 3rem (48px), 700 weight, 1.2 line height
-- **H2:** 2.25rem (36px), 700 weight, 1.25 line height
-- **H3:** 1.875rem (30px), 600 weight, 1.3 line height
-- **H4:** 1.5rem (24px), 600 weight, 1.375 line height
-- **H5:** 1.25rem (20px), 600 weight, 1.5 line height
-- **Body:** 1rem (16px), 400 weight, 1.5 line height
-- **Small:** 0.875rem (14px), 400 weight, 1.5 line height
-- **Caption:** 0.75rem (12px), 400 weight, 1.5 line height
+- **Heading:** Cormorant Garamond (`font-heading`) - Headings, titles, display text
+- **Body:** Lora (`font-body`) - Body text, descriptions, paragraphs
+- **Mono:** Geist Mono (`font-mono`) - Numbers, codes, technical data
+- **Sans:** Geist (`font-sans`) - UI elements, navigation
+
+**Type Scale (Responsive):**
+
+- **H1:** `text-3xl md:text-4xl lg:text-5xl font-bold font-heading`
+- **H2:** `text-2xl md:text-3xl lg:text-4xl font-bold font-heading`
+- **H3:** `text-xl md:text-2xl font-bold font-heading`
+- **H4:** `text-lg md:text-xl font-semibold font-heading`
+- **Body:** `text-base font-body leading-relaxed`
+- **Small:** `text-sm font-body`
+- **Data:** `text-sm font-mono`
+
+Default line-height: 1.6 (set on body).
 
 ### Spacing Scale
 
 4px base unit (0.25rem):
+
 - **1** = 4px
 - **2** = 8px
 - **3** = 12px
@@ -95,7 +114,25 @@ export default {
 - **16** = 64px
 - **20** = 80px
 
+### Responsive Spacing
+
+| Element           | Mobile | Tablet (md) | Desktop (lg) |
+| ----------------- | ------ | ----------- | ------------ |
+| Layout Gap        | gap-4  | gap-6       | gap-8        |
+| Container Padding | px-4   | px-6        | px-8         |
+| Section Spacing   | py-12  | py-16       | py-20        |
+| Card Gap          | gap-4  | gap-6       | gap-6        |
+
+### Common Patterns
+
+```
+Container:  max-w-7xl mx-auto px-4 md:px-6 lg:px-8
+Section:    py-12 md:py-16 lg:py-20
+Card Grid:  grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6
+```
+
 ### Border Radius
+
 - **sm** = 2px
 - **base** = 4px
 - **md** = 6px
@@ -104,90 +141,43 @@ export default {
 - **2xl** = 16px
 - **full** = 9999px (circular)
 
-### Shadows
-- **sm** - Subtle elevation
-- **base** - Default card shadow
-- **md** - Hover state elevation
-- **lg** - Modal/popover elevation
-- **xl** - Maximum elevation
-
 ## Animations
 
 All animations follow these principles:
+
 - **Purposeful** - Every animation serves a functional purpose
-- **Subtle** - Gentle, calming motion that reinforces the earthy aesthetic
+- **Subtle** - Gentle motion that reinforces the warm, scholarly aesthetic
 - **Fast** - Micro-interactions complete in 150-300ms
 - **Accessible** - Respects `prefers-reduced-motion`
 
-### Available Animations
-
-- `animate-fade-in` - Fade in (200ms)
-- `animate-fade-out` - Fade out (200ms)
-- `animate-slide-in` - Slide in from bottom (300ms)
-- `animate-modal-open` - Modal scale + fade (250ms)
-- `animate-toast-slide-in` - Toast slide from right (300ms)
-- `animate-shimmer` - Skeleton loading shimmer (1500ms)
-- `animate-accordion-down` - Accordion expand (300ms)
-- `animate-button-press` - Button press feedback (100ms)
-- `animate-card-hover` - Card hover lift (200ms)
-
-### Easing Curves
-
-- **Standard:** `cubic-bezier(0.4, 0.0, 0.2, 1)` - ease-in-out
-- **Entrance:** `cubic-bezier(0.0, 0.0, 0.2, 1)` - ease-out
-- **Exit:** `cubic-bezier(0.4, 0.0, 1, 1)` - ease-in
-
 ## Dark Mode
 
-The design system includes a nature-inspired dark theme that maintains the earthy aesthetic:
+Enable dark mode by adding the `dark` class to your root element. The Dark Academia dark theme uses deep warm charcoal backgrounds with brighter forest green and burgundy accents.
 
-- **Background:** Deep teal (#082B34)
-- **Foreground:** Light taupe (#F9F7F5)
-- **Primary:** Brighter teal (#5FA3B8) for visibility
-- **Accent:** Desaturated sage for calm feel
+## Migration History
 
-Enable dark mode by adding the `dark` class to your root element.
-
-## Migration from Previous Version
-
-### Breaking Changes
-
-1. **Font Family Changed**
-   - **Before:** Inter + JetBrains Mono
-   - **After:** Geist + Geist Mono
-   - **Action:** Update font imports in your apps
-
-2. **Cyberpunk Elements Removed**
-   - Removed: `glow-*` colors, `surface-*` colors, gradient stops
-   - Removed: `animate-glow-pulse`, `shadow-glow-*`
-   - **Action:** Replace with standard colors and shadows
-
-3. **Dark Mode Updated**
-   - **Before:** Cyberpunk theme (sky blue, amber, glow effects)
-   - **After:** Nature-inspired (teal, sage, earthy tones)
-   - **Action:** Review dark mode implementations
-
-4. **New Typography Size**
-   - Added: `text-5xl` (48px) for H1 headings
-   - **Action:** Update H1 elements to use `text-5xl`
+- **v1.0.0** - Cyberpunk theme (Inter + JetBrains Mono, glow effects, sky/amber)
+- **v2.0.0** - Nature-Inspired theme (Geist + Geist Mono, teal/sage/taupe)
+- **v3.0.0** - Dark Academia theme (Cormorant Garamond + Lora + Geist Mono, oklch colors, warm earth tones)
 
 ## Contributing
 
 When adding new design tokens:
+
 1. Add to `design-tokens.css` first (single source of truth)
 2. Reference in `tailwind-preset.js` using CSS variables
-3. Document in this README
-4. Update frontend specification if needed
+3. Update the design system site at `apps/web/app-design-system`
+4. Document in this README
 
 ## Resources
 
-- [Frontend Specification](../../../docs/front-end-spec.md)
-- [Design Handoff Stories](../../../docs/stories/design-handoff-stories.md)
+- [Design System Site](../../apps/web/app-design-system) - Interactive reference (port 8036)
+- [Style Guide](../../apps/web/app-design-system/docs/STYLE_GUIDE.md) - Quick reference
+- [v0 Rules](../../apps/web/app-design-system/docs/V0_RULES.md) - For v0.dev generation
 - [Tailwind CSS Documentation](https://tailwindcss.com)
 
 ---
 
-**Version:** 2.0.0  
-**Last Updated:** 2025-12-10  
-**Status:** Aligned with Frontend Specification v1.0
-
+**Version:** 3.0.0
+**Theme:** Dark Academia
+**Status:** Active
