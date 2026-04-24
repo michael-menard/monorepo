@@ -18,6 +18,7 @@ import {
   checkRateLimited,
 } from './shared-browser.js'
 import { processBricklinkSet } from './bricklink-set.js'
+import { processBricklinkCmf } from './bricklink-cmf.js'
 
 const API_BASE = process.env.LEGO_API_URL || 'http://localhost:9100'
 const S3_BUCKET = process.env.S3_BUCKET || 'lego-moc-files'
@@ -49,7 +50,21 @@ function randomDelay(): number {
  * Does NOT scrape price guides (separate queue).
  */
 export async function processBricklinkMinifig(job: BricklinkMinifigJob): Promise<ScrapeResult> {
-  // Delegate set scraping to dedicated handler
+  // CMF packs (col* prefix) are sets on BrickLink but should be saved as minifig variants
+  if (job.itemType === 'S' && /^col/i.test(job.itemNumber)) {
+    const cmfResult = await processBricklinkCmf(job)
+    return {
+      success: cmfResult.success,
+      rateLimited: cmfResult.rateLimited,
+      resetHint: cmfResult.resetHint,
+      error: cmfResult.error,
+      itemNumber: cmfResult.itemNumber,
+      variantId: cmfResult.variantId,
+      instanceId: cmfResult.instanceId,
+    }
+  }
+
+  // Regular sets — delegate to set handler
   if (job.itemType === 'S') {
     const setResult = await processBricklinkSet(job)
     return {

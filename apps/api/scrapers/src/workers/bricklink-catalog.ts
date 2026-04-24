@@ -143,9 +143,27 @@ export async function processBricklinkCatalog(
       currentPage++
     }
 
+    // Filter out CMF box/bundle/random set listings before enqueuing
+    const filteredItems = allItems.filter(item => {
+      if (item.itemType === 'S' && /^col/i.test(item.itemNumber)) {
+        const name = item.name
+        if (
+          /\(Complete Random Set of/i.test(name) ||
+          /\(Complete Series of/i.test(name) ||
+          /\(Box of/i.test(name)
+        ) {
+          logger.info(`[bricklink-catalog] Skipping bundle listing: ${name}`, {
+            itemNumber: item.itemNumber,
+          })
+          return false
+        }
+      }
+      return true
+    })
+
     // Enqueue each discovered item as a child job
     let enqueued = 0
-    for (const item of allItems) {
+    for (const item of filteredItems) {
       await minifigQueue.add(
         'scrape',
         {
@@ -159,7 +177,11 @@ export async function processBricklinkCatalog(
       enqueued++
     }
 
-    logger.info(`[bricklink-catalog] Enqueued ${enqueued} jobs from catalog`, { catalogUrl })
+    const skipped = allItems.length - filteredItems.length
+    logger.info(`[bricklink-catalog] Enqueued ${enqueued} jobs from catalog`, {
+      catalogUrl,
+      skipped: skipped > 0 ? skipped : undefined,
+    })
 
     return {
       success: true,

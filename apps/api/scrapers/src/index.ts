@@ -157,12 +157,16 @@ function createWorkers() {
         }
       } else if (result.variantId) {
         // Minifig scrape completed — auto-enqueue price job
-        await queues.bricklinkPrices.add('price', {
-          itemNumber: job.data.itemNumber,
-          itemType: job.data.itemType,
-          variantId: result.variantId,
-        })
-        logger.info(`[worker:minifig] Enqueued price job for ${job.data.itemNumber}`)
+        // Skip for CMF items (col* prefix) — CMF worker already scrapes prices inline
+        const isCmf = job.data.itemType === 'S' && /^col/i.test(job.data.itemNumber)
+        if (!isCmf) {
+          await queues.bricklinkPrices.add('price', {
+            itemNumber: job.data.itemNumber,
+            itemType: job.data.itemType,
+            variantId: result.variantId,
+          })
+          logger.info(`[worker:minifig] Enqueued price job for ${job.data.itemNumber}`)
+        }
       }
 
       return result

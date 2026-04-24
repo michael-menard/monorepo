@@ -1047,23 +1047,47 @@ async function main() {
 
       const cmfCount = items.filter(i => i.itemType === 'S').length
       const minifigCount = items.filter(i => i.itemType === 'M').length
+      // Filter out CMF box/bundle/random set listings
+      const filteredItems = items.filter(item => {
+        if (item.itemType === 'S' && /^col/i.test(item.itemNumber)) {
+          const name = item.name
+          if (
+            /\(Complete Random Set of/i.test(name) ||
+            /\(Complete Series of/i.test(name) ||
+            /\(Box of/i.test(name)
+          ) {
+            console.log(`  Skipping bundle listing: ${name} (${item.itemNumber})`)
+            return false
+          }
+        }
+        return true
+      })
+
+      const skipped = items.length - filteredItems.length
       console.log(
-        `\nProcessing ${items.length} items` +
+        `\nProcessing ${filteredItems.length} items` +
+          (skipped > 0 ? ` (skipped ${skipped} bundle listings)` : '') +
           (cmfCount > 0 ? ` (${cmfCount} CMF sets)` : '') +
           (minifigCount > 0 ? ` (${minifigCount} minifigs)` : '') +
           '...',
       )
 
-      for (let i = 0; i < items.length; i++) {
-        await processAndSaveMinifig(page, items[i].itemNumber, items[i].itemType, i, items.length)
+      for (let i = 0; i < filteredItems.length; i++) {
+        await processAndSaveMinifig(
+          page,
+          filteredItems[i].itemNumber,
+          filteredItems[i].itemType,
+          i,
+          filteredItems.length,
+        )
 
         // Random delay between items to avoid rate limiting
-        if (i < items.length - 1) {
+        if (i < filteredItems.length - 1) {
           await page.waitForTimeout(randomDelay())
         }
       }
 
-      console.log(`\nDone. Processed ${items.length} items.`)
+      console.log(`\nDone. Processed ${filteredItems.length} items.`)
     } else {
       // Single item mode — detect type from the item number
       const itemType = detectItemType(arg)
