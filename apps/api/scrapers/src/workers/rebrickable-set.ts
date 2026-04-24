@@ -48,8 +48,14 @@ export async function processRebrickableSet(job: RebrickableSetJob): Promise<Reb
     await initializeBucket(S3_BUCKET)
 
     logger.info(`[rebrickable-set] Scraping ${url}`)
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForTimeout(randomDelay())
+
+    // Check for 404
+    if (response?.status() === 404) {
+      logger.warn(`[rebrickable-set] Page not found (404): ${url}`)
+      return { success: false, error: `Page not found (404): ${url}`, url }
+    }
 
     // Check for rate limiting
     const bodyText = await page.evaluate(() => document.body?.innerText || '').catch(() => '')

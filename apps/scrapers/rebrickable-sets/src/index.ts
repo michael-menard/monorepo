@@ -321,7 +321,11 @@ async function scrape(url: string) {
   const page = context.pages()[0] || (await context.newPage())
 
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    if (response?.status() === 404) {
+      throw new Error(`Page not found (404): ${url}`)
+    }
 
     // Rebrickable uses Cloudflare protection — if challenged, click the checkbox
     // in the browser window. Persistent profile means this is usually only needed once.

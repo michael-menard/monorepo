@@ -139,12 +139,19 @@ function createWorkers() {
         )
 
         // Cross-enqueue rebrickable set scrape if not already scraped
+        // Skip non-numeric set numbers (e.g. col06-1, fig-*) — these are minifig IDs, not sets
         try {
           const setNumber = job.data.itemNumber
-          const rbSetNumber = /-\d+$/.test(setNumber) ? setNumber : `${setNumber}-1`
-          const rbUrl = `https://rebrickable.com/sets/${rbSetNumber}/`
-          await queues.rebrickableSet.add('scrape', { url: rbUrl, wishlist: false })
-          logger.info(`[worker:minifig] Cross-enqueued Rebrickable scrape for ${rbSetNumber}`)
+          if (/^\d+-\d+$/.test(setNumber) || /^\d+$/.test(setNumber)) {
+            const rbSetNumber = /-\d+$/.test(setNumber) ? setNumber : `${setNumber}-1`
+            const rbUrl = `https://rebrickable.com/sets/${rbSetNumber}/`
+            await queues.rebrickableSet.add('scrape', { url: rbUrl, wishlist: false })
+            logger.info(`[worker:minifig] Cross-enqueued Rebrickable scrape for ${rbSetNumber}`)
+          } else {
+            logger.info(
+              `[worker:minifig] Skipping Rebrickable cross-enqueue for non-set ID: ${setNumber}`,
+            )
+          }
         } catch (e) {
           logger.warn(`[worker:minifig] Failed to cross-enqueue Rebrickable scrape`, { error: e })
         }
