@@ -11,6 +11,7 @@ export interface MainAreaProps {
   className?: string
   isPageTransitioning?: boolean
   currentPath?: string
+  fillViewport?: boolean
   children?: React.ReactNode
 }
 
@@ -18,6 +19,7 @@ export function MainArea({
   className,
   isPageTransitioning = false,
   currentPath = '/',
+  fillViewport = false,
   children,
 }: MainAreaProps) {
   return (
@@ -25,6 +27,7 @@ export function MainArea({
       className={className}
       isTransitioning={isPageTransitioning}
       currentPath={currentPath}
+      fillViewport={fillViewport}
     >
       {children}
     </ContentArea>

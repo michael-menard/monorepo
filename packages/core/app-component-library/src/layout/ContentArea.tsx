@@ -18,6 +18,8 @@ export interface ContentAreaProps {
   isTransitioning?: boolean
   /** Whether to animate page transitions. Defaults to true. */
   animate?: boolean
+  /** When true, content fills available viewport height via flex chain (no scroll on main, no container constraint) */
+  fillViewport?: boolean
 }
 
 const pageTransitionVariants = {
@@ -40,22 +42,26 @@ export function ContentArea({
   currentPath = '/',
   isTransitioning = false,
   animate = true,
+  fillViewport = false,
 }: ContentAreaProps) {
+  const mainClasses = fillViewport
+    ? 'flex-1 min-h-0 flex flex-col overflow-hidden'
+    : 'flex-1 min-h-[calc(100vh-4rem)] overflow-auto transition-all duration-300'
+
+  const innerClasses = fillViewport
+    ? 'flex-1 min-h-0 flex flex-col px-6 pt-4 pb-12'
+    : 'container mx-auto px-4 py-6 relative'
+
   if (!animate) {
     return (
-      <main className={cn('flex-1 min-h-[calc(100vh-4rem)] overflow-auto', className)}>
-        <div className="container mx-auto px-4 py-6">{children}</div>
+      <main className={cn(mainClasses, className)}>
+        <div className={innerClasses}>{children}</div>
       </main>
     )
   }
 
   return (
-    <main
-      className={cn(
-        'flex-1 min-h-[calc(100vh-4rem)] overflow-auto transition-all duration-300',
-        className,
-      )}
-    >
+    <main className={cn(mainClasses, className)}>
       <AnimatePresence mode="wait">
         <motion.div
           key={currentPath}
@@ -63,7 +69,7 @@ export function ContentArea({
           initial="initial"
           animate="animate"
           exit="exit"
-          className="container mx-auto px-4 py-6 relative"
+          className={innerClasses}
         >
           {isTransitioning ? (
             <motion.div

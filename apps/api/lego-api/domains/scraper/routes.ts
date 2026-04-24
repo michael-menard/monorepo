@@ -273,15 +273,32 @@ scraper.get('/jobs', async c => {
 
   for (const queueName of targetQueues) {
     const queue = getQueue(queueName)
-    const statuses = status ? [status] : ['waiting', 'active', 'completed', 'failed', 'delayed']
-    const jobs = await queue.getJobs(statuses as any[], 0, limit)
-    allJobs.push(...jobs.map(j => mapJob(j, queueName)))
+
+    if (status) {
+      // Single status filter — straightforward
+      const jobs = await queue.getJobs([status] as any[], 0, limit)
+      allJobs.push(...jobs.map(j => mapJob(j, queueName)))
+    } else {
+      // Fetch each status separately so active/failed/completed aren't drowned
+      // out by a large waiting queue. Active and failed always get full slots.
+      const perStatusLimits: Array<{ statuses: string[]; max: number }> = [
+        { statuses: ['active'], max: 50 },
+        { statuses: ['failed'], max: 100 },
+        { statuses: ['waiting', 'delayed'], max: limit },
+        { statuses: ['completed'], max: 200 },
+      ]
+
+      for (const { statuses: s, max } of perStatusLimits) {
+        const jobs = await queue.getJobs(s as any[], 0, max)
+        allJobs.push(...jobs.map(j => mapJob(j, queueName)))
+      }
+    }
   }
 
   // Sort by createdAt desc
   allJobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  return c.json({ jobs: allJobs.slice(0, limit) })
+  return c.json({ jobs: allJobs })
 })
 
 // ─────────────────────────────────────────────────────────────────────────

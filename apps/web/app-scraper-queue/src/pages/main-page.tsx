@@ -120,7 +120,7 @@ export function MainPage() {
   }, [events, dispatch])
 
   return (
-    <div className="container mx-auto py-6 flex flex-col gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ export function MainPage() {
       </div>
 
       {/* Tabbed scraper queues */}
-      <AppTabs defaultValue="bricklink-minifig" onValueChange={setActiveTab}>
+      <AppTabs defaultValue="bricklink-minifig" onValueChange={setActiveTab} className="shrink-0">
         <AppTabsList variant="default" className="flex-wrap">
           {TABS.map(tab => (
             <AppTabsTrigger key={tab.key} value={tab.key} variant="default">

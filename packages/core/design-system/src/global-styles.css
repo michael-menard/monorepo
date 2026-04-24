@@ -10,6 +10,13 @@
     border-color: hsl(var(--border));
   }
 
+  /* Anchor the flex height chain to the viewport */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
@@ -17,11 +24,6 @@
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
-  }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
   }
 
   /* Focus styles for accessibility */

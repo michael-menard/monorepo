@@ -87,6 +87,9 @@ function UnauthenticatedLayout({
 // Authenticated Layout — header, tabs, sidebar, footer
 // ─────────────────────────────────────────────────────────────────────────
 
+/** Routes that fill the viewport (no footer, flex height chain) */
+const FILL_VIEWPORT_PATHS = ['/settings/scraper']
+
 function AuthenticatedLayout({
   children,
   activeTab,
@@ -100,14 +103,16 @@ function AuthenticatedLayout({
   isPageTransitioning: boolean
   currentPath: string
 }) {
+  const fillViewport = FILL_VIEWPORT_PATHS.some(p => currentPath.startsWith(p))
+
   return (
     <NavigationProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
+      <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
         <PageTransitionSpinner />
 
         {/* Header */}
         <motion.div
-          className="sticky top-0 z-50"
+          className="shrink-0 sticky top-0 z-50"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -119,7 +124,7 @@ function AuthenticatedLayout({
         <MobileSidebar />
 
         {/* Navigation tabs — hidden on mobile, shown on md+ */}
-        <div className="hidden md:block border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
+        <div className="hidden md:block shrink-0 border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <AppTabs value={activeTab} onValueChange={onTabChange}>
               <AppTabsList variant="underline" className="h-11 w-full justify-start">
@@ -143,18 +148,25 @@ function AuthenticatedLayout({
         </div>
 
         {/* Main content area */}
-        <MainArea isPageTransitioning={isPageTransitioning} currentPath={currentPath}>
+        <MainArea
+          isPageTransitioning={isPageTransitioning}
+          currentPath={currentPath}
+          fillViewport={fillViewport}
+        >
           {children}
         </MainArea>
 
-        {/* Footer */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <Footer />
-        </motion.div>
+        {/* Footer — hidden in fillViewport mode */}
+        {!fillViewport && (
+          <motion.div
+            className="shrink-0"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <Footer />
+          </motion.div>
+        )}
       </div>
     </NavigationProvider>
   )

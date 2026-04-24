@@ -37,14 +37,33 @@ function ScraperPage() {
  */
 export function SettingsModule() {
   return (
-    <ModuleLayout>
-      <Routes>
-        <Route index element={<SettingsLandingPage />} />
-        <Route path="scraper" element={<ScraperPage />} />
-        <Route path="themes" element={<ThemeMappingsPage />} />
-        <Route path="*" element={<Navigate to="/settings" replace />} />
-      </Routes>
-    </ModuleLayout>
+    <Routes>
+      <Route
+        index
+        element={
+          <ModuleLayout>
+            <SettingsLandingPage />
+          </ModuleLayout>
+        }
+      />
+      <Route
+        path="scraper"
+        element={
+          <ModuleLayout fillViewport>
+            <ScraperPage />
+          </ModuleLayout>
+        }
+      />
+      <Route
+        path="themes"
+        element={
+          <ModuleLayout>
+            <ThemeMappingsPage />
+          </ModuleLayout>
+        }
+      />
+      <Route path="*" element={<Navigate to="/settings" replace />} />
+    </Routes>
   )
 }
 

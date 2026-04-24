@@ -310,7 +310,7 @@ function getMinimalPermissions(userId: string): UserPermissions {
     isAdult: false,
     isSuspended: false,
     suspendedReason: null,
-    features: ['moc', 'wishlist', 'profile'],
+    features: [...TIER_FEATURES['free-tier']],
     quotas: {
       mocs: { current: 0, limit: 5, remaining: 5 },
       wishlists: { current: 0, limit: 1, remaining: 1 },
