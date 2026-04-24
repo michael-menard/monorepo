@@ -113,6 +113,30 @@ export const getTokenPayload = <T extends JwtPayload>(token: string): T | null =
 }
 
 /**
+ * Checks if a Cognito ID token has admin group membership.
+ *
+ * @param idToken - The Cognito ID token string
+ * @returns true if the user is in the 'admin' or 'admins' group
+ */
+export const isAdmin = (idToken: string): boolean => {
+  const payload = decodeToken<CognitoIdTokenPayload>(idToken)
+  if (!payload) return false
+  const groups = payload['cognito:groups'] ?? []
+  return groups.includes('admin') || groups.includes('admins')
+}
+
+/**
+ * Extracts user groups from a Cognito ID token.
+ *
+ * @param idToken - The Cognito ID token string
+ * @returns Array of group names, or empty array if invalid
+ */
+export const getUserGroups = (idToken: string): string[] => {
+  const payload = decodeToken<CognitoIdTokenPayload>(idToken)
+  return payload?.['cognito:groups'] ?? []
+}
+
+/**
  * Extracts scopes/permissions from a Cognito access token.
  * Cognito access tokens contain a space-separated scope string.
  *

@@ -119,6 +119,18 @@ export const SetSchema = z.object({
   // Tags (resolved from entity_tags)
   tags: z.array(z.string()).optional(),
 
+  // Product links
+  productLinks: z
+    .array(
+      z.object({
+        label: z.string(),
+        url: z.string(),
+        source: z.enum(['lego.com', 'rebrickable', 'bricklink', 'manual']),
+        addedAt: z.string(),
+      }),
+    )
+    .optional(),
+
   // Timestamps
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -256,9 +268,80 @@ export const UpdateSetInputSchema = z.object({
     .nullable()
     .optional(),
   scrapedSources: z.array(z.string()).optional(),
+
+  // Product links
+  productLinks: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(200),
+        url: z.string().url(),
+        source: z.enum(['lego.com', 'rebrickable', 'bricklink', 'manual']),
+        addedAt: z.string().datetime(),
+      }),
+    )
+    .optional(),
 })
 
 export type UpdateSetInput = z.infer<typeof UpdateSetInputSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Product Links
+// ─────────────────────────────────────────────────────────────────────────
+
+export const ProductLinkSourceSchema = z.enum(['lego.com', 'rebrickable', 'bricklink', 'manual'])
+export type ProductLinkSource = z.infer<typeof ProductLinkSourceSchema>
+
+export const ProductLinkSchema = z.object({
+  label: z.string().min(1).max(200),
+  url: z.string().url(),
+  source: ProductLinkSourceSchema,
+  addedAt: z.string().datetime(),
+})
+
+export type ProductLink = z.infer<typeof ProductLinkSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Admin Update Input (admin-only spec + link fields)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const AdminUpdateSetInputSchema = z.object({
+  // Product specs
+  pieceCount: z.number().int().positive().nullable().optional(),
+  brand: z.string().max(100).nullable().optional(),
+  year: z.number().int().min(1900).max(2100).nullable().optional(),
+  msrpPrice: z.string().nullable().optional(),
+  weight: z.string().nullable().optional(),
+  dimensions: z
+    .object({
+      height: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      width: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      depth: z
+        .object({ cm: z.number().nullable().optional(), inches: z.number().nullable().optional() })
+        .nullable()
+        .optional(),
+      studsWidth: z.number().nullable().optional(),
+      studsDepth: z.number().nullable().optional(),
+      studsHeight: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  releaseDate: z.coerce.date().nullable().optional(),
+  retireDate: z.coerce.date().nullable().optional(),
+  availabilityStatus: AvailabilityStatusSchema.nullable().optional(),
+  description: z.string().max(5000).nullable().optional(),
+  theme: z.string().max(100).nullable().optional(),
+
+  // Product links
+  productLinks: z.array(ProductLinkSchema).optional(),
+})
+
+export type AdminUpdateSetInput = z.infer<typeof AdminUpdateSetInputSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
 // Query

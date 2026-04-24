@@ -25,11 +25,15 @@ import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@
 import {
   useGetSetByIdQuery,
   useUpdateSetMutation,
+  useUpdateSetAdminMutation,
   useCreateSetInstanceMutation,
   useGetBuildableMocsQuery,
 } from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
 import { InstancesTable } from '../components/InstancesTable'
+import { InlineEditField } from '../components/InlineEditField'
+import { ProductLinks } from '../components/ProductLinks'
+import { useIsAdmin } from '../hooks/useIsAdmin'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -411,8 +415,10 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   })
 
   const [updateSet] = useUpdateSetMutation()
+  const [updateSetAdmin] = useUpdateSetAdminMutation()
   const [createInstance] = useCreateSetInstanceMutation()
   const { success: toastSuccess, error: toastError } = useToast()
+  const isAdmin = useIsAdmin()
 
   const lightboxImages = useMemo(() => buildLightboxImages(set), [set])
   const lightbox = useLightbox(lightboxImages.length)
@@ -447,6 +453,42 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
       }
     },
     [set, updateSet, toastSuccess, toastError],
+  )
+
+  const handleAdminSpecUpdate = useCallback(
+    async (field: string, value: unknown) => {
+      if (!set) return
+      try {
+        await updateSetAdmin({ id: set.id, data: { [field]: value } }).unwrap()
+      } catch (err) {
+        toastError(err, `Failed to update ${field}`)
+        throw err // Let InlineEditField know to revert
+      }
+    },
+    [set, updateSetAdmin, toastError],
+  )
+
+  const handleProductLinksUpdate = useCallback(
+    async (links: Array<{ label: string; url: string; source: string; addedAt: string }>) => {
+      if (!set) return
+      try {
+        await updateSetAdmin({
+          id: set.id,
+          data: {
+            productLinks: links as Array<{
+              label: string
+              url: string
+              source: 'lego.com' | 'rebrickable' | 'bricklink' | 'manual'
+              addedAt: string
+            }>,
+          },
+        }).unwrap()
+      } catch (err) {
+        toastError(err, 'Failed to update product links')
+        throw err
+      }
+    },
+    [set, updateSetAdmin, toastError],
   )
 
   const handleQuantityWantedUpdate = useCallback(
@@ -581,28 +623,99 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
           )}
         </div>
 
-        {/* Right: Product specs */}
-        <div data-testid="set-detail-specs">
+        {/* Right: Product specs + links */}
+        <div className="space-y-6" data-testid="set-detail-specs">
           <Card>
             <CardHeader>
               <CardTitle>Product Specs</CardTitle>
             </CardHeader>
             <CardContent className="divide-y">
-              <SpecRow
+              <InlineEditField
                 label="Pieces"
-                value={
-                  typeof set.pieceCount === 'number' ? set.pieceCount.toLocaleString() : '\u2014'
-                }
+                value={set.pieceCount}
+                variant="number"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('pieceCount', v)}
+                min={1}
               />
               <SpecRow
                 label="Minifigs"
                 value={set.minifigs.length > 0 ? String(set.minifigs.length) : '\u2014'}
               />
-              <SpecRow label="MSRP" value={formatCurrency(set.msrpPrice, set.msrpCurrency)} />
-              <SpecRow label="Weight" value={formatWeight(set.weight)} />
-              <SpecRow label="Height" value={formatDimension(set.dimensions?.height)} />
-              <SpecRow label="Width" value={formatDimension(set.dimensions?.width)} />
-              <SpecRow label="Depth" value={formatDimension(set.dimensions?.depth)} />
+              <InlineEditField
+                label="MSRP"
+                value={set.msrpPrice}
+                displayValue={formatCurrency(set.msrpPrice, set.msrpCurrency)}
+                variant="number"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('msrpPrice', v != null ? String(v) : null)}
+                step={0.01}
+                min={0}
+              />
+              <InlineEditField
+                label="Weight"
+                value={set.weight}
+                displayValue={formatWeight(set.weight)}
+                variant="number"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('weight', v != null ? String(v) : null)}
+                placeholder="grams"
+                min={0}
+              />
+              {(isAdmin || set.dimensions?.height) && (
+                <InlineEditField
+                  label="Height"
+                  value={set.dimensions?.height?.cm}
+                  displayValue={formatDimension(set.dimensions?.height)}
+                  variant="number"
+                  isAdmin={isAdmin}
+                  onSave={v =>
+                    handleAdminSpecUpdate('dimensions', {
+                      ...set.dimensions,
+                      height: { ...set.dimensions?.height, cm: v },
+                    })
+                  }
+                  placeholder="cm"
+                  step={0.1}
+                  min={0}
+                />
+              )}
+              {(isAdmin || set.dimensions?.width) && (
+                <InlineEditField
+                  label="Width"
+                  value={set.dimensions?.width?.cm}
+                  displayValue={formatDimension(set.dimensions?.width)}
+                  variant="number"
+                  isAdmin={isAdmin}
+                  onSave={v =>
+                    handleAdminSpecUpdate('dimensions', {
+                      ...set.dimensions,
+                      width: { ...set.dimensions?.width, cm: v },
+                    })
+                  }
+                  placeholder="cm"
+                  step={0.1}
+                  min={0}
+                />
+              )}
+              {(isAdmin || set.dimensions?.depth) && (
+                <InlineEditField
+                  label="Depth"
+                  value={set.dimensions?.depth?.cm}
+                  displayValue={formatDimension(set.dimensions?.depth)}
+                  variant="number"
+                  isAdmin={isAdmin}
+                  onSave={v =>
+                    handleAdminSpecUpdate('dimensions', {
+                      ...set.dimensions,
+                      depth: { ...set.dimensions?.depth, cm: v },
+                    })
+                  }
+                  placeholder="cm"
+                  step={0.1}
+                  min={0}
+                />
+              )}
               {set.dimensions?.studsWidth ||
               set.dimensions?.studsDepth ||
               set.dimensions?.studsHeight ? (
@@ -617,13 +730,60 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
                     .join(' \u00D7 ')}
                 />
               ) : null}
-              <SpecRow label="Year" value={set.year != null ? String(set.year) : '\u2014'} />
-              <SpecRow label="Brand" value={set.brand ?? '\u2014'} />
-              <SpecRow label="Release Date" value={formatDate(set.releaseDate)} />
-              <SpecRow label="Retire Date" value={formatDate(set.retireDate)} />
-              <SpecRow label="Availability" value={availability.label} />
+              <InlineEditField
+                label="Year"
+                value={set.year}
+                variant="number"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('year', v)}
+                min={1900}
+                max={2100}
+              />
+              <InlineEditField
+                label="Brand"
+                value={set.brand}
+                variant="text"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('brand', v)}
+              />
+              <InlineEditField
+                label="Release Date"
+                value={set.releaseDate}
+                variant="date"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('releaseDate', v)}
+              />
+              <InlineEditField
+                label="Retire Date"
+                value={set.retireDate}
+                variant="date"
+                isAdmin={isAdmin}
+                onSave={v => handleAdminSpecUpdate('retireDate', v)}
+              />
+              <InlineEditField
+                label="Availability"
+                value={set.availabilityStatus}
+                displayValue={availability.label}
+                variant="select"
+                isAdmin={isAdmin}
+                options={[
+                  { label: 'Available', value: 'available' },
+                  { label: 'Retiring Soon', value: 'retiring_soon' },
+                  { label: 'Retired', value: 'retired' },
+                ]}
+                onSave={v => handleAdminSpecUpdate('availabilityStatus', v)}
+              />
             </CardContent>
           </Card>
+
+          {/* Product Links */}
+          <ProductLinks
+            sourceUrl={set.sourceUrl}
+            lastScrapedSource={set.lastScrapedSource}
+            productLinks={set.productLinks}
+            isAdmin={isAdmin}
+            onUpdate={handleProductLinksUpdate}
+          />
         </div>
       </div>
 

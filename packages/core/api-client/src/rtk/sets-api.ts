@@ -21,6 +21,7 @@ import {
   type SetListQuery,
   type CreateSetInput,
   type UpdateSetInput,
+  type AdminUpdateSetInput,
   type CreateSetInstanceInput,
   type UpdateSetInstanceInput,
   type BatchReorder,
@@ -104,6 +105,22 @@ export const setsApi = createApi({
     updateSet: builder.mutation<Set, { id: string; data: UpdateSetInput }>({
       query: ({ id, data }) => ({
         url: `/sets/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => SetSchema.parse(response),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Set' as const, id },
+        { type: 'SetList' as const, id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * PATCH /api/sets/:id/admin — admin-only spec + link updates
+     */
+    updateSetAdmin: builder.mutation<Set, { id: string; data: AdminUpdateSetInput }>({
+      query: ({ id, data }) => ({
+        url: `/sets/${id}/admin`,
         method: 'PATCH',
         body: data,
       }),
@@ -377,6 +394,7 @@ export const {
   useGetSetByIdQuery,
   useAddSetMutation,
   useUpdateSetMutation,
+  useUpdateSetAdminMutation,
   useDeleteSetMutation,
   usePurchaseSetMutation,
   useUpdateBuildStatusMutation,

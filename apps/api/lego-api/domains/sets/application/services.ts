@@ -203,6 +203,12 @@ export function createSetsService(deps: SetsServiceDeps) {
       if (input.lastScrapedAt !== undefined) updateData.lastScrapedAt = input.lastScrapedAt
       if (input.lastScrapedSource !== undefined)
         updateData.lastScrapedSource = input.lastScrapedSource
+      if (input.brand !== undefined) updateData.brand = input.brand
+      if (input.year !== undefined) updateData.year = input.year
+      if (input.retireDate !== undefined) updateData.retireDate = input.retireDate
+      if (input.priceGuide !== undefined) updateData.priceGuide = input.priceGuide
+      if (input.scrapedSources !== undefined) updateData.scrapedSources = input.scrapedSources
+      if (input.productLinks !== undefined) updateData.productLinks = input.productLinks
 
       return setRepo.update(setId, updateData)
     },
@@ -371,10 +377,7 @@ export function createSetsService(deps: SetsServiceDeps) {
       return setInstanceRepo.update(instanceId, input)
     },
 
-    async deleteSetInstance(
-      userId: string,
-      instanceId: string,
-    ): Promise<Result<void, SetError>> {
+    async deleteSetInstance(userId: string, instanceId: string): Promise<Result<void, SetError>> {
       // Verify instance exists
       const instanceResult = await setInstanceRepo.findById(instanceId)
       if (!instanceResult.ok) return instanceResult

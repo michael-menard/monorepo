@@ -466,11 +466,7 @@ export function createSetInstanceRepository(
     },
 
     async findById(id: string): Promise<Result<SetInstance, 'NOT_FOUND'>> {
-      const rows = await db
-        .select()
-        .from(setInstances)
-        .where(eq(setInstances.id, id))
-        .limit(1)
+      const rows = await db.select().from(setInstances).where(eq(setInstances.id, id)).limit(1)
 
       if (!rows[0]) {
         return err('NOT_FOUND')
@@ -598,6 +594,7 @@ function mapRowToSet(row: Record<string, unknown>, storeName: string | null): Se
     imageUrl: toCloudFrontUrl(r.imageUrl),
     imageVariants: (r.imageVariants as Set['imageVariants']) ?? null,
     tags: r.tags ?? [],
+    productLinks: (r.productLinks as Set['productLinks']) ?? [],
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   }

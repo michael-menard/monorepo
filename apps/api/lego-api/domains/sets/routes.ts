@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { auth } from '../../middleware/auth.js'
+import { auth, adminAuth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
 import { setMinifigs } from '../../composition/database.js'
 import { createSetsService } from './application/index.js'
@@ -26,6 +26,7 @@ import {
   BuildStatusUpdateInputSchema,
   CreateSetInstanceInputSchema,
   UpdateSetInstanceInputSchema,
+  AdminUpdateSetInputSchema,
 } from './types.js'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -266,6 +267,44 @@ sets.post('/', async c => {
   }
 
   return c.json(result.data, 201)
+})
+
+/**
+ * PATCH /:id/admin - Admin-only update for product specs and links
+ *
+ * Requires admin role. Handles spec corrections and product link management.
+ * Product links are deduplicated by URL on write.
+ * Must be registered before PATCH /:id to avoid param capture.
+ */
+sets.patch('/:id/admin', adminAuth, async c => {
+  const userId = c.get('userId')
+  const setId = c.req.param('id')
+
+  const body = await c.req.json()
+  const input = AdminUpdateSetInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  // Deduplicate product links by URL if provided
+  const updateData = { ...input.data }
+  if (updateData.productLinks) {
+    const seen = new Map<string, (typeof updateData.productLinks)[number]>()
+    for (const link of updateData.productLinks) {
+      seen.set(link.url, link)
+    }
+    updateData.productLinks = Array.from(seen.values())
+  }
+
+  const result = await setsService.updateSet(userId, setId, updateData)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
 })
 
 /**

@@ -7,7 +7,7 @@
  * Click cards to select, then bulk delete/retry from the action bar.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -48,6 +48,7 @@ import {
   AppDialogHeader,
   AppDialogTitle,
   AppDialogDescription,
+  AppInput,
   Badge,
   Button,
   cn,
@@ -496,6 +497,21 @@ const LANE_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 20
 
+function jobMatchesFilter(job: ScrapeJob, filter: string): boolean {
+  if (!filter) return true
+  const lower = filter.toLowerCase()
+  const label = getJobLabel(job).toLowerCase()
+  if (label.includes(lower)) return true
+  if (job.type.toLowerCase().includes(lower)) return true
+  if (job.failedReason?.toLowerCase().includes(lower)) return true
+  if (job.id.toLowerCase().includes(lower)) return true
+  const data = job.data as Record<string, unknown>
+  for (const val of Object.values(data)) {
+    if (String(val).toLowerCase().includes(lower)) return true
+  }
+  return false
+}
+
 function SwimLane({
   title,
   status,
@@ -527,16 +543,31 @@ function SwimLane({
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [filter, setFilter] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const itemCount = sortableIds?.length ?? jobs.length
-  const visibleJobs = sortableIds ? jobs : jobs.slice(0, visibleCount)
-  const visibleSortableIds = sortableIds?.slice(0, visibleCount)
+  const filteredJobs = useMemo(
+    () => (filter ? jobs.filter(j => jobMatchesFilter(j, filter)) : jobs),
+    [jobs, filter],
+  )
+
+  const filteredSortableIds = useMemo(() => {
+    if (!sortableIds || !filter) return sortableIds
+    const matchingJobIds = new Set(filteredJobs.map(j => j.id))
+    return sortableIds.filter(sid => {
+      const job = sortableIdToJob?.get(sid)
+      return job && matchingJobIds.has(job.id)
+    })
+  }, [sortableIds, filter, filteredJobs, sortableIdToJob])
+
+  const itemCount = filteredSortableIds?.length ?? filteredJobs.length
+  const visibleJobs = filteredSortableIds ? filteredJobs : filteredJobs.slice(0, visibleCount)
+  const visibleSortableIds = filteredSortableIds?.slice(0, visibleCount)
   const hasMore = visibleCount < itemCount
 
-  const laneJobIds = jobs.map(j => j.id)
+  const laneJobIds = filteredJobs.map(j => j.id)
   const selectedInLane = laneJobIds.filter(id => selectedIds.has(id))
-  const allSelected = jobs.length > 0 && selectedInLane.length === jobs.length
+  const allSelected = filteredJobs.length > 0 && selectedInLane.length === filteredJobs.length
 
   // Reset pagination when item count shrinks
   useEffect(() => {
@@ -579,45 +610,56 @@ function SwimLane({
         isDropTarget && 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20',
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <span className="text-sm font-medium flex items-center gap-1.5">
-          {jobs.length > 0 && onSelectAll && (
-            <button
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => onSelectAll(allSelected ? [] : laneJobIds)}
-            >
-              {allSelected ? (
-                <CheckSquare className="h-3.5 w-3.5 text-blue-500" />
-              ) : (
-                <Square className="h-3.5 w-3.5" />
-              )}
-            </button>
-          )}
-          {title}
-          {isDropTarget && (
-            <span className="ml-1.5 text-xs text-blue-500 font-normal">Drop to retry</span>
-          )}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {jobs.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 px-1 text-muted-foreground hover:text-destructive"
-              onClick={() => clearJobs(status)}
-              disabled={isClearing}
-            >
-              {isClearing ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Trash2 className="h-3 w-3" />
-              )}
-            </Button>
-          )}
-          <Badge variant="outline" className="text-xs">
-            {jobs.length}
-          </Badge>
+      <div className="px-3 py-2 border-b border-border shrink-0 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium flex items-center gap-1.5">
+            {filteredJobs.length > 0 && onSelectAll && (
+              <button
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => onSelectAll(allSelected ? [] : laneJobIds)}
+              >
+                {allSelected ? (
+                  <CheckSquare className="h-3.5 w-3.5 text-blue-500" />
+                ) : (
+                  <Square className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
+            {title}
+            {isDropTarget && (
+              <span className="ml-1.5 text-xs text-blue-500 font-normal">Drop to retry</span>
+            )}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {jobs.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1 text-muted-foreground hover:text-destructive"
+                onClick={() => clearJobs(status)}
+                disabled={isClearing}
+              >
+                {isClearing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+              </Button>
+            )}
+            <Badge variant="outline" className="text-xs">
+              {filter ? `${filteredJobs.length}/${jobs.length}` : jobs.length}
+            </Badge>
+          </div>
         </div>
+        <AppInput
+          type="search"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          className="h-7 text-xs"
+          onKeyDown={e => {
+            if (e.key === 'Escape') setFilter('')
+          }}
+        />
       </div>
       <div ref={scrollRef} className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0">
         {isSortable ? (

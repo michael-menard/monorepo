@@ -209,6 +209,18 @@ export const sets = pgTable(
     }>(),
     scrapedSources: text('scraped_sources').array().default([]),
 
+    // Product links (multiple external URLs — BrickLink, Rebrickable, retailers, etc.)
+    productLinks: jsonb('product_links')
+      .$type<
+        Array<{
+          label: string
+          url: string
+          source: 'lego.com' | 'rebrickable' | 'bricklink' | 'manual'
+          addedAt: string
+        }>
+      >()
+      .default([]),
+
     // Legacy image fields (kept for backward compat during migration)
     imageUrl: text('image_url'),
     imageVariants: jsonb('image_variants'), // WISH-2016 optimized variants
