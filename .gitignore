@@ -111,6 +111,12 @@ tree/
 .sonar/
 sonar-project.properties.bak
 sonarqube-plugins/*.jar
+# Dev logs
+.dev-logs/
+
+# Backup files
+*.bak*
+
 # Scraper Chrome profiles (session data, cookies, cache)
 .chrome-profile/
 .chrome-profile.bak-*/
