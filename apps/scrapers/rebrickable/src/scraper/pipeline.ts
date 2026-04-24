@@ -907,22 +907,81 @@ export async function runPipeline(
         instructionList = instructionList.slice(0, options.limit)
       }
     } else if (options.likedMocs) {
-      // --liked-mocs: scrape the user's liked MOCs list, free plans only
+      // --liked-mocs: two-phase discovery
+      // Phase 1a: Paginate liked MOCs list to collect ALL MOC URLs
       const likedMocsPage = new LikedMocsPage(page)
       await rateLimiter.acquire()
       await likedMocsPage.navigate(config.userSlug)
 
-      const allInstructions = await likedMocsPage.scrapeAllInstructions(options.limit)
-      instructionList = allInstructions
+      const allLikedMocs = await likedMocsPage.scrapeAllInstructions()
+      logger.info(`[pipeline] Liked MOCs list: ${allLikedMocs.length} total`)
 
-      if (options.limit) {
-        instructionList = instructionList.slice(0, options.limit)
-        logger.info(`[pipeline] Limited to ${options.limit} instructions`)
+      // Phase 1b: Shuffle to randomize visit order (avoid bot-like sequential patterns)
+      for (let i = allLikedMocs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[allLikedMocs[i], allLikedMocs[j]] = [allLikedMocs[j], allLikedMocs[i]]
       }
+      logger.info(`[pipeline] Shuffled visit order`)
+
+      // Phase 1c: Visit each detail page to check for free instructions
+      const downloadQueue: typeof allLikedMocs = []
+      let discoveryVisited = 0
+      let discoverySkipped = 0
+
+      for (const item of allLikedMocs) {
+        if (interrupted) break
+
+        // Stop when we have enough free MOCs
+        if (options.limit && downloadQueue.length >= options.limit) {
+          logger.info(`[pipeline] Discovery reached limit of ${options.limit} free MOCs — stopping`)
+          break
+        }
+
+        // Skip already-completed MOCs
+        if (!options.force && (await checkpoint.isCompleted(item.mocNumber))) {
+          discoverySkipped++
+          continue
+        }
+
+        discoveryVisited++
+        await rateLimiter.acquire()
+        await humanWait('scanning')
+
+        try {
+          const mocPage = new MocDetailPage(page!)
+          await retry.execute(() => mocPage.navigate(item.url), `discover MOC-${item.mocNumber}`)
+
+          const isFree = await mocPage.hasFreeInstructions()
+          if (isFree) {
+            downloadQueue.push(item)
+            logger.info(
+              `[pipeline] MOC-${item.mocNumber} "${item.title}" — FREE ✓ (queue: ${downloadQueue.length})`,
+            )
+          } else {
+            logger.info(`[pipeline] MOC-${item.mocNumber} "${item.title}" — not free, skipping`)
+          }
+
+          await waitBetweenPages()
+
+          // Refresh session periodically
+          await refreshSessionIfStale()
+        } catch (err) {
+          logger.warn(`[pipeline] Discovery failed for MOC-${item.mocNumber}`, {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+
+      logger.info(
+        `[pipeline] Discovery complete: ${downloadQueue.length} free MOCs found, ` +
+          `${discoveryVisited} visited, ${discoverySkipped} skipped (already completed)`,
+      )
+
+      instructionList = downloadQueue
 
       await db
         .update(scrapeRuns)
-        .set({ instructionsFound: allInstructions.length })
+        .set({ instructionsFound: downloadQueue.length })
         .where(eq(scrapeRuns.id, scrapeRunId))
     } else {
       // Normal mode: scrape purchases list from Rebrickable
@@ -1012,10 +1071,14 @@ export async function runPipeline(
           continue
         }
 
-        // Download instruction files via the modal-based flow
+        // Download instruction files
+        // For liked (free) MOCs: use direct download links
+        // For purchased MOCs: use the modal-based flow
         // IMPORTANT: Do this BEFORE parts export — the BrickLink XML export
         // opens an inline overlay that corrupts the page state for modals.
-        const fileList = await mocPage.scrapeFileList()
+        const fileList = options.likedMocs
+          ? await mocPage.scrapeFreeFileList()
+          : await mocPage.scrapeFileList()
         if (fileList.length > 0) {
           logger.info(
             `[pipeline] MOC-${item.mocNumber}: found ${fileList.length} files to download`,
@@ -1057,7 +1120,10 @@ export async function runPipeline(
             }
 
             const downloadPath = await retry.execute(
-              () => mocPage.triggerDownload(file, item.mocNumber),
+              () =>
+                options.likedMocs
+                  ? mocPage.downloadFreeFile(file, item.mocNumber)
+                  : mocPage.triggerDownload(file, item.mocNumber),
               `download MOC-${item.mocNumber} file ${fi + 1}`,
             )
 

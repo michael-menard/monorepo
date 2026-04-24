@@ -51,11 +51,19 @@ export function DraggableTag({
       </div>
       <span className="truncate flex-1">{tag}</span>
       {themeCount !== undefined && themeCount > 0 ? (
-        <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+        <Badge
+          variant="default"
+          className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+          title={`Mapped to ${themeCount} theme${themeCount === 1 ? '' : 's'}`}
+        >
           {themeCount}
         </Badge>
       ) : null}
-      <Badge variant="secondary" className="text-xs tabular-nums shrink-0">
+      <Badge
+        variant="secondary"
+        className="text-xs tabular-nums shrink-0"
+        title={`Used by ${mocCount} MOC${mocCount === 1 ? '' : 's'}`}
+      >
         {mocCount}
       </Badge>
       {onDelete ? (

@@ -43,7 +43,11 @@ export function ThemeBucket({ theme, tags, onRemoveTag, onDeleteTheme }: ThemeBu
             {theme}
           </CardTitle>
           <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="text-xs tabular-nums">
+            <Badge
+              variant="outline"
+              className="text-xs tabular-nums"
+              title={`${tags.length} tag${tags.length === 1 ? '' : 's'} in this theme`}
+            >
               {tags.length}
             </Badge>
             <Button
@@ -69,7 +73,11 @@ export function ThemeBucket({ theme, tags, onRemoveTag, onDeleteTheme }: ThemeBu
                 className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs"
               >
                 {t.tag}
-                <Badge variant="secondary" className="text-[10px] px-1 py-0 h-3.5">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-1 py-0 h-3.5"
+                  title={`Used by ${t.mocCount} MOC${t.mocCount === 1 ? '' : 's'}`}
+                >
                   {t.mocCount}
                 </Badge>
                 <Button

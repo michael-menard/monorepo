@@ -39,9 +39,7 @@ export class LikedMocsPage extends BasePage {
       await waitForPagination()
     }
 
-    logger.info(
-      `[liked-mocs] Found ${allItems.length} free liked instructions across ${pageNum} pages`,
-    )
+    logger.info(`[liked-mocs] Found ${allItems.length} liked MOCs across ${pageNum} pages`)
     return allItems
   }
 
@@ -49,24 +47,16 @@ export class LikedMocsPage extends BasePage {
     const items: ScrapedInstructionListItem[] = []
 
     // Wait for MOC containers to be present before evaluating
-    await this.page.waitForSelector('.set-col-main', { timeout: 10000 }).catch(() => {
-      logger.warn('[liked-mocs] No .set-col-main elements found on page')
+    await this.page.waitForSelector('.set-tn', { timeout: 10000 }).catch(() => {
+      logger.warn('[liked-mocs] No .set-tn elements found on page')
     })
 
     // Each MOC is a .set-tn container. The .js-sort-data div holds data attributes.
-    // Premium MOCs have a <span class="label label-dark-blue" title="Premium MOC"> inside .js-set-actions.
-    // We skip disabled MOCs (they have <small class="text-right trunc">(disabled)</small>).
-    const rawItems = await this.page.$$eval('.set-col-main', (containers: Element[]) =>
+    // We collect ALL liked MOCs here — free vs premium filtering happens at the detail page level
+    // during the discovery phase, by checking for "Download the free Building Instructions:" text.
+    const rawItems = await this.page.$$eval('.set-tn', (containers: Element[]) =>
       containers
         .map(container => {
-          // Skip disabled MOCs
-          const disabledEl = container.querySelector('small.trunc')
-          if (disabledEl?.textContent?.includes('(disabled)')) return null
-
-          // Skip Premium MOCs: .js-set-actions contains .label-dark-blue
-          const actions = container.querySelector('.js-set-actions')
-          if (actions?.querySelector('.label-dark-blue')) return null
-
           // MOC number from data-variant on .js-sort-data
           const sortData = container.querySelector('.js-sort-data')
           const mocNumber = sortData?.getAttribute('data-variant') || ''
@@ -75,10 +65,14 @@ export class LikedMocsPage extends BasePage {
           const title = sortData?.getAttribute('data-set_name') || ''
           const partsStr = sortData?.getAttribute('data-num_parts') || '0'
 
-          // URL from the anchor wrapping the thumbnail
+          // URL from the anchor wrapping the thumbnail — strip tracking query params
+          // (e.g. ?spot=likedmocs_user&t=...&cs=...) to get the canonical MOC URL
           const anchor = container.querySelector('a[href*="/mocs/MOC-"]')
-          const href = anchor?.getAttribute('href') || ''
-          const url = href.startsWith('http') ? href : `${REBRICKABLE_BASE}${href}`
+          const rawHref = anchor?.getAttribute('href') || ''
+          const cleanHref = rawHref.split('?')[0]
+          const url = cleanHref.startsWith('http')
+            ? cleanHref
+            : `https://rebrickable.com${cleanHref}`
 
           // Author from the "By <a>" link
           const authorLink = container.querySelector('.clearfix.trunc a[href*="/users/"]')
@@ -111,7 +105,7 @@ export class LikedMocsPage extends BasePage {
       }
     }
 
-    logger.info(`[liked-mocs] Found ${items.length} free MOCs on this page`)
+    logger.info(`[liked-mocs] Found ${items.length} MOCs on this page`)
     return items
   }
 

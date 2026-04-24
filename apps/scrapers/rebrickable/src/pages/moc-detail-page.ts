@@ -744,7 +744,7 @@ export class MocDetailPage extends BasePage {
           }
         })
 
-        // Fallback: if no thumbnails found, try hero images (less complete)
+        // Fallback 1: if no thumbnails found, try hero images from FlexSlider
         if (urls.size === 0) {
           document.querySelectorAll('.flex-viewport .slides img').forEach(img => {
             const parent = img.parentElement
@@ -752,6 +752,17 @@ export class MocDetailPage extends BasePage {
 
             const src = (img as HTMLImageElement).src
             if (src && src.includes('/media/') && !src.includes('spinner')) {
+              urls.add(src)
+            }
+          })
+        }
+
+        // Fallback 2: single-image MOCs have no carousel at all — just a standalone
+        // <img> with src containing /media/thumbs/mocs/ at 1000x800 size
+        if (urls.size === 0) {
+          document.querySelectorAll('img[src*="/media/thumbs/mocs/"]').forEach(img => {
+            const src = (img as HTMLImageElement).src
+            if (src && !src.includes('spinner') && src.includes('/1000x800')) {
               urls.add(src)
             }
           })
@@ -1192,6 +1203,155 @@ export class MocDetailPage extends BasePage {
 
     logger.info(`[moc-detail] Parsed ${parts.length} parts from CSV`)
     return parts
+  }
+
+  // ── Free MOC Instructions ──────────────────────────────────────────────
+
+  /**
+   * Check whether this MOC detail page offers free downloadable instructions.
+   * Free MOCs display "Download the free Building Instructions:" text in the sidebar.
+   */
+  async hasFreeInstructions(): Promise<boolean> {
+    try {
+      const has = await this.page.evaluate(() =>
+        document.body.innerText.includes('Download the free Building Instructions'),
+      )
+      logger.info(`[moc-detail] Free instructions: ${has ? 'yes' : 'no'}`)
+      return has
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Scrape the list of downloadable files from a free MOC detail page.
+   * Free MOCs use direct <a href="/users/.../download/..."> links rather than
+   * the modal-based js-load-page-modal flow used by purchased MOCs.
+   */
+  async scrapeFreeFileList(): Promise<ScrapedFile[]> {
+    try {
+      const rawFiles = await this.page.evaluate(() => {
+        const results: Array<{
+          fileName: string
+          downloadDataUrl: string
+          fileSize: string
+          uploadDate: string
+        }> = []
+
+        // Find the container holding free download links — it's a .pb-30 div
+        // with max-height, appearing after "Download the free Building Instructions:" text
+        const links = document.querySelectorAll('a[href*="/download/"]')
+
+        for (const link of links) {
+          const href = link.getAttribute('href') || ''
+          // Skip links that aren't in the instructions section (e.g. changelog links)
+          if (!href.includes('/mocs/purchases/download/') && !href.includes('/mocs/download/')) {
+            continue
+          }
+
+          const fileName =
+            link.querySelector('.trunc')?.textContent?.trim() || link.textContent?.trim() || ''
+          if (!fileName) continue
+
+          // Extract file size and upload date from sibling <small> elements
+          const row = link.closest('.row')
+          const smallEls = row ? Array.from(row.querySelectorAll('small')) : []
+
+          results.push({
+            fileName,
+            downloadDataUrl: href,
+            fileSize: smallEls.length > 1 ? smallEls[1]?.textContent?.trim() || '' : '',
+            uploadDate: smallEls.length > 0 ? smallEls[0]?.textContent?.trim() || '' : '',
+          })
+        }
+
+        // Deduplicate by URL
+        const seen = new Map<string, (typeof results)[number]>()
+        for (const r of results) {
+          if (
+            !seen.has(r.downloadDataUrl) ||
+            (!seen.get(r.downloadDataUrl)!.fileName && r.fileName)
+          ) {
+            seen.set(r.downloadDataUrl, r)
+          }
+        }
+
+        return Array.from(seen.values())
+      })
+
+      logger.info(`[moc-detail] Found ${rawFiles.length} free download file(s)`)
+      return rawFiles
+    } catch {
+      logger.info('[moc-detail] No free download links found')
+      return []
+    }
+  }
+
+  /**
+   * Download a free instruction file by clicking its direct link.
+   * Unlike purchased MOCs (which use a modal flow), free MOCs have plain <a href> links
+   * that trigger a direct file download.
+   *
+   * Falls back to the modal-based triggerDownload() if the direct click doesn't
+   * produce a download event (defensive against page variations).
+   */
+  async downloadFreeFile(file: ScrapedFile, mocNumber?: string): Promise<string | null> {
+    const tag = `[moc-detail][MOC-${mocNumber ?? '?'}]`
+    const fullUrl = file.downloadDataUrl.startsWith('http')
+      ? file.downloadDataUrl
+      : `https://rebrickable.com${file.downloadDataUrl}`
+
+    logger.info(`${tag} Downloading free file: "${file.fileName}"`, { url: fullUrl })
+
+    // Create download directory
+    const mocDir = mocNumber ? resolve(DOWNLOAD_DIR, `MOC-${mocNumber}`) : DOWNLOAD_DIR
+    if (!existsSync(mocDir)) {
+      mkdirSync(mocDir, { recursive: true })
+    }
+
+    // Attempt 1: Click the direct download link
+    try {
+      const linkSelector = `a[href="${file.downloadDataUrl}"]`
+      const linkEl = await this.page.$(linkSelector)
+
+      if (linkEl) {
+        const [download] = await Promise.all([
+          this.page.waitForEvent('download', { timeout: 30000 }),
+          linkEl.click(),
+        ])
+
+        const suggestedFilename = download.suggestedFilename()
+        const filePath = resolve(mocDir, suggestedFilename)
+        await download.saveAs(filePath)
+
+        // Verify non-zero file size
+        const { statSync } = await import('fs')
+        const fileSize = statSync(filePath).size
+        if (fileSize === 0) {
+          logger.warn(`${tag} Free file saved but is 0 bytes: ${filePath}`)
+          return null
+        }
+
+        logger.info(
+          `${tag} FREE download SUCCESS — "${suggestedFilename}" (${fileSize} bytes) → ${filePath}`,
+        )
+
+        // Navigate back to the MOC page if the download triggered a navigation
+        if (!this.page.url().includes(`MOC-${mocNumber}`)) {
+          await this.page.goBack({ waitUntil: 'networkidle' }).catch(() => {})
+        }
+
+        return filePath
+      }
+    } catch (err) {
+      logger.warn(`${tag} Direct download failed, trying modal fallback`, {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+
+    // Attempt 2: Fall back to the modal-based download flow
+    logger.info(`${tag} Falling back to modal download for "${file.fileName}"`)
+    return this.triggerDownload(file, mocNumber)
   }
 
   private parseCsvLine(line: string): string[] {

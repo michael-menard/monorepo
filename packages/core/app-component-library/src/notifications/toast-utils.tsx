@@ -155,7 +155,7 @@ export const getErrorMessage = (error: unknown): string => {
         case 'FILE_NOT_FOUND':
           return 'The file you are trying to delete no longer exists.'
         case 'PERMISSION_DENIED':
-          return 'You do not have permission to delete this file.'
+          return 'You do not have permission to perform this action.'
         case 'FILE_IN_USE':
           return 'This file cannot be deleted because it is currently in use.'
         default:
@@ -171,11 +171,11 @@ export const getErrorMessage = (error: unknown): string => {
         case 401:
           return 'You are not authorized to perform this action. Please log in and try again.'
         case 403:
-          return 'You do not have permission to delete this file.'
+          return 'You do not have permission to perform this action.'
         case 404:
-          return 'The file you are trying to delete was not found.'
+          return 'The requested resource was not found.'
         case 409:
-          return 'This file cannot be deleted due to a conflict. It may be in use by another process.'
+          return 'A conflict occurred. The resource may be in use by another process.'
         case 500:
           return 'A server error occurred. Please try again later.'
         case 503:
