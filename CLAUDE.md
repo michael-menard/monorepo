@@ -1,36 +1,36 @@
 # CLAUDE.md - Project Guidelines
 
-<!-- WRKF-000 Harness Validation: 2026-01-22 -->
-
 ## Overview
 
-This is a TypeScript monorepo (pnpm + Turborepo) for a LEGO MOC instructions platform. React 19 frontend with AWS serverless backend.
+This is a TypeScript monorepo (pnpm + Turborepo) for a personal LEGO building app. See `PRODUCT.md` for domain context and `DESIGN.md` for design and UX guidance.
 
 ## Tech Stack
 
 ### Monorepo Tooling
 
-- **pnpm** for package management and workspaces across all apps and packages in the monorepo
+- **pnpm** for package management and workspaces across all apps and packages
 - **Turborepo** for orchestrating builds, tests, and linting with caching and parallelization
 - See also: [Monorepo tooling details](./docs/tech-stack/monorepo.md)
 
 ### Frontend
 
-- **React 19** for the main UI layer in `apps/web/*`
-- **Tailwind CSS** for utility-first styling across all React apps
-- **shadcn/ui** as the base component primitives, wrapped in our app component library under `packages/core/app-component-library`
+- **React 19** + **Vite** for all web apps in `apps/web/*`
+- **Tailwind CSS** for utility-first styling
+- **shadcn/ui** primitives wrapped in `@repo/app-component-library` — see `packages/core/CLAUDE.md` for the layering convention
 - See also: [Frontend architecture](./docs/tech-stack/frontend.md)
 
 ### Backend
 
-- **AWS Lambda** for serverless compute, deployed via the `apps/api` project
-- **Amazon API Gateway (APIGW)** for HTTP APIs and routing into Lambda handlers
-- **Amazon Aurora PostgreSQL** as the primary relational database for transactional data
+- **Bun** runtime with **Hono** framework
+- **Hexagonal architecture** (Ports & Adapters) with composition root DI
+- **Drizzle** ORM + **Drizzle Kit** for migrations
+- **PostgreSQL** + **MinIO** in Docker, **AWS Cognito** for auth (only AWS service)
+- **Zero trust** — validate at every boundary, Zod on all inputs
 - See also: [Backend & data architecture](./docs/tech-stack/backend.md)
 
 ### Testing
 
-- **Vitest** for unit and integration tests across apps and packages
+- **Vitest** for unit and integration tests
 - **Playwright** for end-to-end browser tests in `apps/web/playwright`
 - **MSW (Mock Service Worker)** for API mocking in unit/integration tests (not used in Playwright E2E)
 - See also: [Testing strategy](./docs/testing/overview.md)
@@ -46,33 +46,64 @@ pnpm check-types:all      # Type check everything
 pnpm test:all             # Test everything
 ```
 
-> **Linting:** Always use `/lint-fix` instead of `pnpm lint` directly. The skill runs lint with auto-fix, captures unfixable errors grouped by rule, and surfaces config improvement candidates. See `.claude/skills/lint-fix/SKILL.md`.
+> **Linting:** Always use `/lint-fix` instead of `pnpm lint` directly. The skill runs lint with auto-fix, captures unfixable errors grouped by rule, and surfaces config improvement candidates.
 
 ## Project Structure
 
 ```
 apps/
-  api/                    # Serverless API (AWS Lambda)
-  web/                    # Web applications
-    main-app/             # Primary user-facing app
-    app-dashboard/        # Dashboard app
-    playwright/           # E2E tests
+  api/                      # Backend services (see apps/api/CLAUDE.md)
+    lego-api/               # Main product API (Bun + Hono)
+    knowledge-base/         # KB MCP server (see apps/api/knowledge-base/CLAUDE.md)
+    workflow/               # Being rearchitected (see apps/api/workflow/CLAUDE.md)
+    notifications-server/   # Real-time notifications
+  web/                      # Micro-apps (see apps/web/CLAUDE.md for full inventory)
+    main-app/               # Shell — hosts all micro-apps
+    app-dashboard/          # Collection overview and stats
+    app-design-system/      # Design system reference (Next.js, port 8036)
+    app-*-gallery/          # Collection browsers (sets, MOCs, minifigs, wishlist, inspiration)
+    app-scraper-queue/      # Scraper queue management
+    playwright/             # E2E tests
+  scrapers/                 # Data scrapers (Rebrickable, BrickLink, LEGO.com)
+  data/                     # Data utilities
 packages/
-  core/                   # Shared core packages
-    app-component-library/  # UI primitives + app-level components (@repo/app-component-library)
-    logger/               # Logging utility (@repo/logger)
-    design-system/        # Design tokens
-    accessibility/        # A11y utilities
-  backend/                # Backend utilities
+  core/                     # Shared frontend packages (see packages/core/CLAUDE.md)
+    app-component-library/  # UI primitives + app-level components (@repo/ui)
+    design-system/          # Design tokens, CSS variables, Tailwind preset
+    logger/                 # Structured logging (@repo/logger)
+  backend/                  # Shared backend packages (@repo/db, @repo/api-core, etc.)
+infra/
+  ports.json                # Canonical port registry — never hardcode ports
 ```
 
-### App Component Library Architecture (@repo/app-component-library)
+Nested `CLAUDE.md` files exist in key directories for area-specific conventions and gotchas.
 
-- `_primitives/` = raw shadcn/Radix wrappers
-  - Things like `Button`, `Tabs`, `Select`, `DropdownMenu`, etc. live here.
-  - They are as close as possible to the original shadcn components, just wired to our Tailwind theme + `cn`.
-- Feature folders (e.g. `buttons/`, `cards/`, `selects/`, etc.) = app‑level variations
-  - Components like `CustomButton`, `AppSelect`, `StatsCards`, etc. compose or wrap the primitives with app‑specific behavior and opinionated APIs.
+## Working Principles
+
+### See Something, Fix Something
+
+If you encounter an issue while working:
+
+- **Easy fix** — fix it inline, don't ignore it
+- **Moderate complexity** — stop and ask the user how to proceed
+- **Large scope** — create a plan in the KB for later, flag it to the user
+
+**Never** say "not my problem" or "out of scope" and move on silently.
+
+### No Code Without Proof
+
+All code changes require tests. "Done" means tests exist and pass.
+
+- **New component** — unit tests + integration test showing it renders correctly
+- **Bug fix** — regression test proving the bug is fixed
+- **API endpoint** — integration test hitting the endpoint
+- **Refactor** — existing tests still pass
+
+**Mocking rules:**
+
+- **Mock** external dependencies: API calls, database calls, imported modules, file system, third-party services
+- **Never mock** the code under test — the function, component, or module being exercised must run its real implementation
+- Tests must exercise **real behavior**. A test that mocks the function it's testing to return true is worthless.
 
 ## Code Style
 
@@ -87,6 +118,7 @@ packages/
 
 ### TypeScript
 
+- ES7+ TypeScript — use modern syntax
 - Strict mode enabled
 - `noImplicitAny: false` (any is allowed but discouraged)
 - **ALWAYS use Zod schemas for types - never use TypeScript interfaces**
@@ -113,13 +145,12 @@ interface User {
 }
 ```
 
-Benefits: Runtime validation, automatic type inference, self-documenting constraints.
-
 ### Components
 
 - Functional components only (function declarations)
 - Named exports preferred
 - **NO BARREL FILES** - import directly from source files
+- **Component decomposition** — break components down aggressively, maximize reuse
 
 ### Component Directory Structure (REQUIRED)
 
@@ -134,25 +165,7 @@ MyComponent/
     index.ts             # Component-specific utilities
 ```
 
-Example:
-
-```
-UserProfile/
-  index.tsx
-  __tests__/
-    UserProfile.test.tsx
-  __types__/
-    index.ts             # UserProfileSchema, UserProfilePropsSchema, etc.
-  utils/
-    formatUserData.ts
-    index.ts
-```
-
-Notes:
-
-- Shared types go in a central `__types__` directory, not component-local
-- The `utils/` directory is for component-specific helper functions
-- Import the component via its parent directory: `import { UserProfile } from './UserProfile'`
+**Colocation rule:** Sub-components, utils, tests, and types live next to the component they serve. Extract to a shared location (`packages/`) only when a second consumer needs it.
 
 ## Critical Import Rules
 
@@ -162,7 +175,7 @@ Notes:
 // CORRECT
 import { Button, Card, Table } from '@repo/ui'
 
-// WRONG - never import from individual paths
+// WRONG - never import from individual paths or primitives
 import { Button } from '@repo/ui/button'
 ```
 
@@ -186,10 +199,15 @@ console.log('message')
 
 ## Design System
 
-- LEGO-inspired theme: Sky/Teal color palette
+- **Theme:** Dark Academia (v3.0.0) — warm earth tones, forest greens, burgundy accents
+- **Reference site:** `apps/web/app-design-system` (port 8036) — the single source of truth
+- **Fonts:** Cormorant Garamond (`font-heading`), Lora (`font-body`), Geist Mono (`font-mono`), Geist (`font-sans`)
+- **Colors:** oklch color space, semantic tokens only — never use direct colors like `bg-white` or `text-black`
+- **Docs:** `apps/web/app-design-system/docs/STYLE_GUIDE.md` for quick reference
 - Tailwind CSS for styling
 - Framer Motion for animations
 - Accessibility-first: ARIA labels, keyboard nav, focus management
+- **Before writing or modifying UI components**, search the KB for "design system" to get current theme tokens, typography, spacing, and component patterns
 
 ## Quality Gates
 
@@ -207,47 +225,29 @@ All code must pass before commit, and **all new additions must pass linting and 
 
 ### Package Exports (REQUIRED)
 
-All packages under `packages/` **must export built JavaScript + declaration files from `dist/`**, not raw TypeScript source. This ensures packages work for all consumers (Vite, Node/Lambda, tests) and keeps type errors contained within the package that owns them.
-
-```jsonc
-// CORRECT - export built JS + types from dist/
-"exports": {
-  ".": {
-    "import": "./dist/index.js",
-    "types": "./dist/index.d.ts"
-  }
-}
-
-// WRONG - never export raw TypeScript source
-"exports": {
-  ".": "./src/index.ts"
-}
-```
-
-Every package with a `build` script must produce `dist/` output. Turborepo handles build ordering automatically — `pnpm dev` runs `^build` on all workspace dependencies before starting dev servers.
+All packages under `packages/` **must export built JavaScript + declaration files from `dist/`**, not raw TypeScript source. See `packages/core/CLAUDE.md` for details.
 
 ### Worktree Awareness
 
-This repo uses git worktrees (managed by [Worktrunk](https://github.com/anthropics/worktrunk)). Worktrees share `node_modules` with the main tree but **do not share `dist/` output**. The `^build` dependency in turbo's `dev` task ensures packages are built before dev servers start, even in fresh worktrees.
+This repo uses git worktrees. Worktrees share `node_modules` with the main tree but **do not share `dist/` output**. The `^build` dependency in turbo's `dev` task ensures packages are built before dev servers start, even in fresh worktrees.
 
 ## Git
 
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, etc.
 - Pre-push hooks run lint, type-check, and tests
-- See `.claude/skills/github-templates/SKILL.md` for issue/PR/commit templates
 
 ## Agents
 
-- Claude agents: `.claude/agents/*.agent.md`
-- Opencode agents: `.opencode/agents/*.md` (150 agents mirroring Claude)
-- Use `@agent-name` to invoke in Opencode
+Claude agents live in `.claude/agents/*.agent.md`.
 
 ## Common Pitfalls
 
 1. Don't create barrel files (index.ts re-exports)
-2. Don't import shadcn components from individual paths
-3. Don't use console.log - use @repo/logger
-4. Don't skip type errors - fix them
-5. Don't hardcode colors - use Tailwind classes
-6. Don't use TypeScript interfaces - use Zod schemas with `z.infer<>`
-7. Prefix intentionally unused variables with `_` (e.g., `_unused`, `{ keep, _skip }`) — the linter is configured to ignore `_`-prefixed names, so this is preferred over `eslint-disable` comments
+2. Don't import shadcn components directly — use `@repo/ui`
+3. Don't use console.log — use `@repo/logger`
+4. Don't skip type errors — fix them
+5. Don't hardcode colors — use semantic Tailwind tokens
+6. Don't use TypeScript interfaces — use Zod schemas with `z.infer<>`
+7. Prefix intentionally unused variables with `_` (e.g., `_unused`) — the linter ignores `_`-prefixed names
+8. Don't hardcode ports — use `infra/ports.json`
+9. Don't mock the code under test — mock external dependencies only
