@@ -111,4 +111,6 @@ tree/
 .sonar/
 sonar-project.properties.bak
 sonarqube-plugins/*.jar
-apps/api/scrapers/bricklink-minifigs/.chrome-profile/
+# Scraper Chrome profiles (session data, cookies, cache)
+.chrome-profile/
+.chrome-profile.bak-*/
