@@ -209,6 +209,15 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate()
   const auth = useSelector(selectAuth)
   const [isPageTransitioning, setIsPageTransitioning] = useState(false)
+  // Track whether we've completed the initial auth check.
+  // Subsequent loading states (token refresh, etc.) should NOT unmount the app shell.
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  useEffect(() => {
+    if (!auth.isLoading && !hasInitialized) {
+      setHasInitialized(true)
+    }
+  }, [auth.isLoading, hasInitialized])
 
   const getTabFromPath = (path: string) => {
     if (path === '/' || path === '/dashboard' || path.startsWith('/dashboard/')) {
@@ -245,7 +254,8 @@ function RootLayoutContent({ children }: { children?: React.ReactNode }) {
     return () => clearTimeout(timer)
   }, [location.pathname, dispatch])
 
-  if (auth.isLoading) {
+  // Only show loading screen on initial auth check, not on token refreshes
+  if (auth.isLoading && !hasInitialized) {
     return <LoadingLayout />
   }
 

@@ -177,6 +177,103 @@ function EditableText({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Editable Textarea (multiline click-to-edit)
+// ─────────────────────────────────────────────────────────────────────────
+
+function EditableTextarea({
+  value,
+  onSave,
+  placeholder = 'Click to edit',
+}: {
+  value: string
+  onSave: (value: string) => void
+  placeholder?: string
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus()
+      textareaRef.current.setSelectionRange(
+        textareaRef.current.value.length,
+        textareaRef.current.value.length,
+      )
+    }
+  }, [editing])
+
+  const commit = useCallback(() => {
+    const trimmed = draft.trim()
+    if (trimmed !== value) {
+      onSave(trimmed)
+    }
+    setEditing(false)
+  }, [draft, value, onSave])
+
+  const cancel = useCallback(() => {
+    setDraft(value)
+    setEditing(false)
+  }, [value])
+
+  if (editing) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') cancel()
+          }}
+          rows={4}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+          placeholder={placeholder}
+        />
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={cancel}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={commit}>
+            Save
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        setDraft(value)
+        setEditing(true)
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          setDraft(value)
+          setEditing(true)
+        }
+      }}
+      className="group cursor-pointer rounded-md p-2 -m-2 hover:bg-accent transition-colors min-h-[3rem] flex items-start gap-1.5"
+      aria-label={`Edit ${placeholder}`}
+    >
+      {value ? (
+        <p className="text-sm whitespace-pre-line flex-1">{value}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground italic flex-1">{placeholder}</p>
+      )}
+      <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Tag Editor
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -430,10 +527,10 @@ export function MinifigDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,28rem)_1fr] gap-8">
         {/* Image */}
-        <div className="lg:col-span-2">
-          <div className="max-w-full sm:max-w-md space-y-4">
+        <div>
+          <div className="space-y-4">
             {minifig.imageUrl || minifig.variant?.imageUrl ? (
               <img
                 src={minifig.imageUrl || minifig.variant?.imageUrl || ''}
@@ -514,6 +611,13 @@ export function MinifigDetailPage() {
                 ) : null}
               </div>
 
+              {minifig.variant?.cmfSeries ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">CMF Series</p>
+                  <p className="text-sm mt-1">{minifig.variant.cmfSeries}</p>
+                </div>
+              ) : null}
+
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Theme</p>
                 <div className="mt-1">
@@ -542,27 +646,6 @@ export function MinifigDetailPage() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">Tags</p>
                 <TagEditor tags={minifig.tags ?? []} onUpdate={tags => handleUpdate({ tags })} />
               </div>
-
-              {minifig.purpose ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Purpose</p>
-                  <p className="text-sm mt-1">{minifig.purpose}</p>
-                </div>
-              ) : null}
-
-              {minifig.plannedUse ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Planned Use</p>
-                  <p className="text-sm mt-1">{minifig.plannedUse}</p>
-                </div>
-              ) : null}
-
-              {minifig.notes ? (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                  <p className="text-sm mt-1 whitespace-pre-line">{minifig.notes}</p>
-                </div>
-              ) : null}
             </CardContent>
           </Card>
 
@@ -747,6 +830,34 @@ export function MinifigDetailPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {/* Description */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Description</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EditableTextarea
+                value={minifig.purpose ?? ''}
+                onSave={purpose => handleUpdate({ purpose: purpose || null })}
+                placeholder="Add a description..."
+              />
+            </CardContent>
+          </Card>
+
+          {/* Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EditableTextarea
+                value={minifig.notes ?? ''}
+                onSave={notes => handleUpdate({ notes: notes || null })}
+                placeholder="Add notes..."
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
