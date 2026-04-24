@@ -539,19 +539,19 @@ export const GalleryCard = ({
           <div
             className={cn(
               'absolute bottom-0 left-0 right-0 z-20',
-              'flex flex-col overflow-hidden',
-              'bg-black/40 backdrop-blur-md backdrop-saturate-150',
+              'hidden sm:flex flex-col overflow-hidden',
+              'bg-black/50 backdrop-blur-sm backdrop-saturate-150',
               'border-t border-white/10',
               'text-white',
               'transition-all duration-300 ease-in-out',
-              'max-h-10 group-hover:max-h-64',
+              'max-h-12 group-hover:max-h-64',
             )}
             data-testid={`${testId}-content-drawer`}
           >
             <div className="flex flex-col gap-1 p-3 pb-1">
               {/* Title - always visible, single line */}
               <h3
-                className="font-semibold text-sm leading-tight truncate"
+                className="font-bold text-base leading-tight truncate"
                 data-testid={`${testId}-title`}
               >
                 {title}
