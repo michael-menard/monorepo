@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { useDispatch } from 'react-redux'
 import {
   Tabs,
@@ -9,7 +9,8 @@ import {
   CardContent,
 } from '@repo/app-component-library'
 import { instructionsApi } from '@repo/api-client/rtk/instructions-api'
-import { Calendar, User, ExternalLink } from 'lucide-react'
+import { Calendar, User, ExternalLink, ChevronRight } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { BuildStatus } from '@repo/api-client/schemas/instructions'
 import type { Moc } from './__types__/moc'
 import { MetaCard } from './MetaCard'
@@ -50,6 +51,39 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
   const dispatch = useDispatch()
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
+
+  const tabsWrapperRef = useRef<HTMLDivElement>(null)
+  const [showScrollHint, setShowScrollHint] = useState(false)
+
+  useEffect(() => {
+    const wrapper = tabsWrapperRef.current
+    if (!wrapper) return
+
+    const checkOverflow = () => {
+      const el = wrapper.querySelector('[data-slot="tabs-list"]') as HTMLElement | null
+      if (!el || el.clientWidth === 0) return
+      setShowScrollHint(el.scrollWidth > el.clientWidth)
+    }
+
+    // Check after layout settles
+    requestAnimationFrame(checkOverflow)
+
+    const el = wrapper.querySelector('[data-slot="tabs-list"]') as HTMLElement | null
+    if (!el) return
+
+    const onScroll = () => {
+      if (el.scrollLeft > 10) setShowScrollHint(false)
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+
+    const ro = new ResizeObserver(checkOverflow)
+    ro.observe(el)
+
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+    }
+  }, [])
 
   const handleFilesUploaded = useCallback(() => {
     dispatch(instructionsApi.util.invalidateTags([{ type: 'Moc', id: moc.id }]))
@@ -165,7 +199,8 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
         </aside>
 
         <main className="lg:col-span-8 xl:col-span-9 space-y-6">
-          <div className="flex items-center gap-3">
+          {/* Title hidden on mobile (shown in aside instead), visible on desktop */}
+          <div className="hidden lg:flex items-center gap-3">
             <MetaCard moc={{ id: moc.id, title: moc.title }} />
             <BuildStatusBadge
               mocId={moc.id}
@@ -180,15 +215,50 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
             partsListsCount={moc.partsLists.length}
           />
           <Tabs defaultValue="description">
-            <TabsList className={`grid w-full ${hasReview ? 'grid-cols-7' : 'grid-cols-6'}`}>
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="gallery">Gallery</TabsTrigger>
-              <TabsTrigger value="instructions">Instructions</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="parts-lists">Parts Lists</TabsTrigger>
-              <TabsTrigger value="parts-orders">Parts Orders</TabsTrigger>
-              {hasReview && <TabsTrigger value="review">Review</TabsTrigger>}
-            </TabsList>
+            <div className="relative" ref={tabsWrapperRef}>
+              <TabsList className="flex w-full overflow-x-auto gap-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <TabsTrigger value="description" className="shrink-0">
+                  Description
+                </TabsTrigger>
+                <TabsTrigger value="gallery" className="shrink-0">
+                  Gallery
+                </TabsTrigger>
+                <TabsTrigger value="instructions" className="shrink-0">
+                  Instructions
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="shrink-0">
+                  Notes
+                </TabsTrigger>
+                <TabsTrigger value="parts-lists" className="shrink-0">
+                  Parts Lists
+                </TabsTrigger>
+                <TabsTrigger value="parts-orders" className="shrink-0">
+                  Parts Orders
+                </TabsTrigger>
+                {hasReview && (
+                  <TabsTrigger value="review" className="shrink-0">
+                    Review
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              <AnimatePresence>
+                {showScrollHint && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pointer-events-none absolute right-0 top-0 flex h-full items-center bg-gradient-to-l from-muted via-muted to-transparent pl-8 pr-1"
+                  >
+                    <motion.div
+                      animate={{ x: [0, 6, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
+                    >
+                      <ChevronRight className="h-5 w-5 text-foreground/60" />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <TabsContent value="description">
               <DescriptionCard mocId={moc.id} description={moc.description} />
             </TabsContent>
