@@ -11,6 +11,7 @@ const config: Config = {
     '../../../packages/core/gallery/src/**/*.{ts,tsx}',
     '../app-instructions-gallery/src/**/*.{ts,tsx}',
     '../app-dashboard/src/**/*.{ts,tsx}',
+    '../app-scraper-queue/src/**/*.{ts,tsx}',
   ],
   // Safelist animation classes used by Radix Dialog/AlertDialog with data-state variants
   // These are needed because Tailwind JIT doesn't always detect them in template strings

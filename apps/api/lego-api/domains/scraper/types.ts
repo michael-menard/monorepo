@@ -78,7 +78,7 @@ export type AddJobInput = z.infer<typeof AddJobInputSchema>
 export const JobListQuerySchema = z.object({
   status: z.enum(['waiting', 'active', 'completed', 'failed', 'delayed']).optional(),
   type: ScraperTypeSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(1000).optional().default(500),
+  limit: z.coerce.number().int().min(1).optional(),
 })
 
 // ─────────────────────────────────────────────────────────────────────────

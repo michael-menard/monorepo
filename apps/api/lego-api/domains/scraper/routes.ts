@@ -263,7 +263,10 @@ scraper.get('/jobs', async c => {
 
   const { status, type, limit } = query.success
     ? query.data
-    : { status: undefined, type: undefined, limit: 500 }
+    : { status: undefined, type: undefined, limit: undefined }
+
+  // BullMQ getJobs end param: -1 means no limit
+  const fetchLimit = limit ?? -1
 
   const targetQueues = type
     ? [QUEUE_NAMES[type as ScraperType]].filter(Boolean)
@@ -275,21 +278,19 @@ scraper.get('/jobs', async c => {
     const queue = getQueue(queueName)
 
     if (status) {
-      // Single status filter — straightforward
-      const jobs = await queue.getJobs([status] as any[], 0, limit)
+      const jobs = await queue.getJobs([status] as any[], 0, fetchLimit)
       allJobs.push(...jobs.map(j => mapJob(j, queueName)))
     } else {
-      // Fetch each status separately so active/failed/completed aren't drowned
-      // out by a large waiting queue. Active and failed always get full slots.
-      const perStatusLimits: Array<{ statuses: string[]; max: number }> = [
-        { statuses: ['active'], max: 50 },
-        { statuses: ['failed'], max: 100 },
-        { statuses: ['waiting', 'delayed'], max: limit },
-        { statuses: ['completed'], max: 200 },
+      // Fetch each status separately so active/failed aren't drowned out
+      const statusGroups: Array<{ statuses: string[] }> = [
+        { statuses: ['active'] },
+        { statuses: ['failed'] },
+        { statuses: ['waiting', 'delayed'] },
+        { statuses: ['completed'] },
       ]
 
-      for (const { statuses: s, max } of perStatusLimits) {
-        const jobs = await queue.getJobs(s as any[], 0, max)
+      for (const { statuses: s } of statusGroups) {
+        const jobs = await queue.getJobs(s as any[], 0, fetchLimit)
         allJobs.push(...jobs.map(j => mapJob(j, queueName)))
       }
     }
