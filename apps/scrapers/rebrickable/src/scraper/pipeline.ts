@@ -49,10 +49,10 @@ const MOC_SINGLE_STEPS = [
   { id: 'scrape_detail', label: 'Scrape metadata' },
   { id: 'scrape_images', label: 'Download images' },
   { id: 'download_files', label: 'Download instruction files' },
+  { id: 'scrape_parts', label: 'Scrape parts inventory' },
   { id: 'upload_minio', label: 'Upload to storage' },
   { id: 'db_upsert', label: 'Save to database' },
   { id: 'gallery_sync', label: 'Sync gallery' },
-  { id: 'scrape_parts', label: 'Scrape parts inventory' },
   { id: 'enrichment', label: 'Enrich data' },
 ]
 import type { Browser, BrowserContext, Page } from 'playwright'
@@ -352,6 +352,20 @@ export async function runSingle(
     }
     await steps.complete('download_files', { filesFound: fileList.length, totalFileSize })
 
+    // Scrape parts from inventory tab — must happen while still on the MOC page
+    // and AFTER file downloads (BrickLink XML export corrupts modal state)
+    await steps.start('scrape_parts')
+    const partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
+    if (partsResult.parts.length > 0) {
+      logger.info(
+        `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
+      )
+    }
+    await steps.complete('scrape_parts', {
+      partsFound: partsResult.parts.length,
+      exports: partsResult.exports.length,
+    })
+
     if (primaryDownloadPath) {
       // Uploads happened inline during download — mark upload_minio as done
       await steps.start('upload_minio')
@@ -371,8 +385,11 @@ export async function runSingle(
       })
       await checkpoint.save(mocNumber, 'uploaded')
 
+      // Merge inventory parts with any parts from scrapeDetail()
+      const allParts = partsResult.parts.length > 0 ? partsResult.parts : detail.parts
+      const normalizedParts = normalizeParts(allParts)
+
       await steps.start('db_upsert')
-      const normalizedParts = normalizeParts(detail.parts)
 
       const instructionResult = await db
         .insert(instructionsTable)
@@ -382,7 +399,10 @@ export async function runSingle(
           author: detail.author,
           rebrickableUrl: mocUrl,
           downloadUrl: mocUrl,
-          partsCount: detail.partsCount,
+          partsCount:
+            normalizedParts.length > 0
+              ? normalizedParts.reduce((sum, p) => sum + p.quantity, 0)
+              : detail.partsCount,
           fileType,
           fileSizeBytes: totalFileSize,
           contentHash,
@@ -401,7 +421,11 @@ export async function runSingle(
             ...(detail.title ? { title: detail.title } : {}),
             ...(detail.author ? { author: detail.author } : {}),
             downloadUrl: mocUrl,
-            ...(detail.partsCount != null ? { partsCount: detail.partsCount } : {}),
+            ...(normalizedParts.length > 0
+              ? { partsCount: normalizedParts.reduce((sum, p) => sum + p.quantity, 0) }
+              : detail.partsCount != null
+                ? { partsCount: detail.partsCount }
+                : {}),
             ...(fileType ? { fileType } : {}),
             ...(totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
             ...(contentHash ? { contentHash } : {}),
@@ -532,69 +556,6 @@ export async function runSingle(
         `[single] MOC-${mocNumber}: source sets linked: ${detail.sourceSets.map(s => s.setNumber).join(', ')}`,
       )
     }
-
-    // Scrape parts from inventory tab
-    await steps.start('scrape_parts')
-    const partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
-    if (partsResult.parts.length > 0) {
-      logger.info(
-        `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
-      )
-
-      // Persist inventory parts to DB — the instruction record already exists
-      if (!options.dryRun) {
-        const invParts = normalizeParts(partsResult.parts)
-        const [inst] = await db
-          .select()
-          .from(instructionsTable)
-          .where(eq(instructionsTable.mocNumber, mocNumber))
-          .limit(1)
-
-        if (inst && invParts.length > 0) {
-          for (const p of invParts) {
-            const [part] = await db
-              .insert(partsTable)
-              .values({
-                partNumber: p.partNumber,
-                color: p.color,
-                name: p.name,
-                category: p.category,
-                imageUrl: p.imageUrl,
-              })
-              .onConflictDoUpdate({
-                target: [partsTable.partNumber, partsTable.color],
-                set: {
-                  ...(p.name ? { name: p.name } : {}),
-                  ...(p.category ? { category: p.category } : {}),
-                  ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
-                },
-              })
-              .returning()
-
-            await db
-              .insert(instructionPartsTable)
-              .values({
-                instructionId: inst.id,
-                partId: part.id,
-                quantity: p.quantity,
-                isSpare: p.isSpare ?? 0,
-              })
-              .onConflictDoUpdate({
-                target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
-                set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
-              })
-          }
-          logger.info(
-            `[single] MOC-${mocNumber}: persisted ${invParts.length} inventory parts to DB`,
-          )
-        }
-      }
-    }
-
-    await steps.complete('scrape_parts', {
-      partsFound: partsResult.parts.length,
-      exports: partsResult.exports.length,
-    })
 
     // Enrichment
     await steps.start('enrichment')
