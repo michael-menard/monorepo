@@ -11,7 +11,7 @@
  *   - moc_parts_lists + moc_parts (parts data)
  */
 
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { logger } from '@repo/logger'
 import * as gallerySchema from '../../../../../packages/backend/db/src/schema.js'

@@ -153,7 +153,7 @@ async function main() {
           await db.insert(gallerySchema.mocFiles).values({
             mocId: galleryMocId,
             fileType: 'gallery-image',
-            fileUrl,
+            s3Key,
             originalFilename: imgFile,
             mimeType: contentType,
           })
@@ -186,7 +186,6 @@ async function main() {
       const ext = extname(instrFile).toLowerCase()
       const contentType = INSTRUCTION_MIME[ext] || 'application/octet-stream'
       const s3Key = `mocs/${mocId}/${instrFile}`
-      const fileUrl = `${S3_ENDPOINT}/${S3_BUCKET}/${s3Key}`
 
       const existing = await db
         .select()
@@ -205,7 +204,7 @@ async function main() {
         await db.insert(gallerySchema.mocFiles).values({
           mocId: galleryMocId,
           fileType: 'instruction',
-          fileUrl,
+          s3Key,
           originalFilename: instrFile,
           mimeType: contentType,
         })
@@ -219,7 +218,6 @@ async function main() {
       if (!existsSync(partsFilePath)) continue
 
       const partsS3Key = `mocs/${mocId}/${partsFilename}`
-      const partsFileUrl = `${S3_ENDPOINT}/${S3_BUCKET}/${partsS3Key}`
 
       const existingParts = await db
         .select()
@@ -243,7 +241,7 @@ async function main() {
         await db.insert(gallerySchema.mocFiles).values({
           mocId: galleryMocId,
           fileType: 'parts-list',
-          fileUrl: partsFileUrl,
+          s3Key: partsS3Key,
           originalFilename: partsFilename,
           mimeType: partsMime,
         })

@@ -774,32 +774,58 @@ export class MocDetailPage extends BasePage {
       const uniqueUrls = [...new Set(imageUrls)]
       logger.info(`[moc-detail] Found ${uniqueUrls.length} images from thumbnail strip`)
 
-      // Download each image using Playwright's API request context (avoids CORS)
+      // Download each image using Node fetch with browser cookies.
+      // Playwright's page.context().request can be prematurely disposed
+      // by playwright-extra, so we use native fetch instead.
+      const cookies = await this.page.context().cookies()
+      const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ')
+      const userAgent = await this.page.evaluate(() => navigator.userAgent)
+      const referer = this.page.url()
+
       for (let i = 0; i < uniqueUrls.length; i++) {
         const url = uniqueUrls[i]
-        try {
-          logger.info(
-            `[moc-detail] Downloading image ${i + 1}/${uniqueUrls.length}: ${url.substring(0, 100)}...`,
-          )
-          const response = await this.page.context().request.get(url)
-          if (!response.ok()) {
-            logger.warn(`[moc-detail] Image fetch failed (${response.status()}): ${url}`)
-            continue
+        const maxAttempts = 3
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            logger.info(
+              `[moc-detail] Downloading image ${i + 1}/${uniqueUrls.length}${attempt > 1 ? ` (attempt ${attempt})` : ''}: ${url.substring(0, 100)}...`,
+            )
+            const response = await fetch(url, {
+              headers: {
+                'User-Agent': userAgent,
+                Cookie: cookieHeader,
+                Accept: 'image/*,*/*',
+                Referer: referer,
+              },
+            })
+            if (!response.ok) {
+              logger.warn(`[moc-detail] Image fetch failed (${response.status}): ${url}`)
+              break // don't retry HTTP errors (404, 403, etc.)
+            }
+
+            const buffer = Buffer.from(await response.arrayBuffer())
+            const contentType = response.headers.get('content-type') || ''
+            const ext = this.getImageExtension(url, contentType)
+            const fileName = `image-${String(i + 1).padStart(2, '0')}.${ext}`
+            const filePath = resolve(imgDir, fileName)
+
+            writeFileSync(filePath, buffer)
+            images.push({ url, filePath })
+            logger.info(`[moc-detail] Saved image: ${fileName} (${buffer.length} bytes)`)
+            break // success
+          } catch (error) {
+            if (attempt === maxAttempts) {
+              logger.warn(
+                `[moc-detail] Failed to download image after ${maxAttempts} attempts: ${url}`,
+                {
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              )
+            } else {
+              // Brief pause before retry
+              await new Promise(r => setTimeout(r, 1000 * attempt))
+            }
           }
-
-          const buffer = await response.body()
-          const contentType = response.headers()['content-type'] || ''
-          const ext = this.getImageExtension(url, contentType)
-          const fileName = `image-${String(i + 1).padStart(2, '0')}.${ext}`
-          const filePath = resolve(imgDir, fileName)
-
-          writeFileSync(filePath, buffer)
-          images.push({ url, filePath })
-          logger.info(`[moc-detail] Saved image: ${fileName} (${buffer.length} bytes)`)
-        } catch (error) {
-          logger.warn(`[moc-detail] Failed to download image: ${url}`, {
-            error: error instanceof Error ? error.message : String(error),
-          })
         }
       }
     } catch (error) {
