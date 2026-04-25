@@ -1,7 +1,7 @@
 import { resolve } from 'path'
 import { Hono } from 'hono'
 import { Queue } from 'bullmq'
-import { Counter, Gauge, Histogram } from 'prom-client'
+import { Counter, Gauge } from 'prom-client'
 import { logger } from '@repo/logger'
 import { getMetrics } from '@repo/observability'
 import { auth } from '../../middleware/auth.js'
@@ -110,13 +110,10 @@ const scraperCircuitBreakerOpen = new Gauge({
   registers: [registry],
 })
 
-const scraperApiLatency = new Histogram({
-  name: 'scraper_api_request_duration_seconds',
-  help: 'Scraper API endpoint latency in seconds',
-  labelNames: ['endpoint', 'method'] as const,
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
-  registers: [registry],
-})
+// Track previous completed/failed counts per queue to compute deltas.
+// On each health poll, we increment the cumulative counters by the
+// difference so Prometheus sees monotonically increasing totals.
+const previousCounts = new Map<string, { completed: number; failed: number }>()
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helper: map BullMQ job to response shape
@@ -517,6 +514,26 @@ scraper.get('/queues', async c => {
     scraperQueueDepth.set({ scraper_type: type, status: 'delayed' }, counts.delayed ?? 0)
     scraperQueuePaused.set({ scraper_type: type }, isPaused ? 1 : 0)
     scraperCircuitBreakerOpen.set({ scraper_type: type }, cb.isOpen ? 1 : 0)
+
+    // Increment completed/failed counters by delta since last poll.
+    // BullMQ completed/failed counts are cumulative within the queue's
+    // configured retention window, so we track the delta between polls.
+    const currentCompleted = counts.completed ?? 0
+    const currentFailed = counts.failed ?? 0
+    const prev = previousCounts.get(type)
+    if (prev) {
+      const completedDelta = currentCompleted - prev.completed
+      const failedDelta = currentFailed - prev.failed
+      // Only increment on positive deltas (counts can decrease when
+      // BullMQ auto-removes old jobs beyond the retention limit)
+      if (completedDelta > 0) {
+        scraperJobsCompleted.inc({ scraper_type: type }, completedDelta)
+      }
+      if (failedDelta > 0) {
+        scraperJobsFailed.inc({ scraper_type: type }, failedDelta)
+      }
+    }
+    previousCounts.set(type, { completed: currentCompleted, failed: currentFailed })
 
     queues.push({
       name: type,
