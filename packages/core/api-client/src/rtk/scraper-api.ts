@@ -109,6 +109,17 @@ export const scraperApi = createApi({
     }),
 
     /**
+     * POST /scraper/jobs/:id/promote — Move a waiting job to front of queue
+     */
+    promoteScrapeJob: builder.mutation<{ success: boolean; status: string; type: string }, string>({
+      query: id => ({
+        url: `/scraper/jobs/${id}/promote`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['ScraperJobs', 'ScraperQueues'],
+    }),
+
+    /**
      * GET /scraper/queues — Queue health + circuit breaker status
      */
     getQueueHealth: builder.query<QueueHealthResponse, void>({
@@ -169,6 +180,7 @@ export const {
   useCancelScrapeJobMutation,
   useClearJobsByStatusMutation,
   useRetryScrapeJobMutation,
+  usePromoteScrapeJobMutation,
   useGetQueueHealthQuery,
   usePauseQueueMutation,
   useResumeQueueMutation,

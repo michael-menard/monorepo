@@ -37,6 +37,7 @@ import {
   Loader2,
   Pause,
   Play,
+  PlayCircle,
   CheckSquare,
   Square,
   X,
@@ -59,6 +60,7 @@ import {
   useCancelScrapeJobMutation,
   useClearJobsByStatusMutation,
   useRetryScrapeJobMutation,
+  usePromoteScrapeJobMutation,
   usePauseQueueMutation,
   useResumeQueueMutation,
 } from '@repo/api-client/rtk/scraper-api'
@@ -164,6 +166,7 @@ function JobCard({
   dragListeners,
   onDelete,
   onRetry,
+  onPromote,
   isSelected,
   onToggleSelect,
   onViewDetail,
@@ -175,6 +178,7 @@ function JobCard({
   dragListeners?: Record<string, unknown>
   onDelete?: (id: string) => void
   onRetry?: (id: string) => void
+  onPromote?: (id: string) => void
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
   onViewDetail?: (job: ScrapeJob) => void
@@ -236,6 +240,20 @@ function JobCard({
       {showError && <p className="text-red-500 truncate">{job.failedReason}</p>}
 
       <div className="flex justify-end gap-1">
+        {(job.status === 'waiting' || job.status === 'delayed') && onPromote && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30"
+            title="Run now — promote to front of queue"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              onPromote(job.id)
+            }}
+          >
+            <PlayCircle className="h-3 w-3" />
+          </Button>
+        )}
         {job.status === 'failed' && onRetry && (
           <Button
             variant="ghost"
@@ -427,6 +445,7 @@ function SortableJobCard({
   sortableId,
   onDelete,
   onRetry,
+  onPromote,
   isSelected,
   onToggleSelect,
   onViewDetail,
@@ -436,6 +455,7 @@ function SortableJobCard({
   sortableId: string
   onDelete?: (id: string) => void
   onRetry?: (id: string) => void
+  onPromote?: (id: string) => void
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
   onViewDetail?: (job: ScrapeJob) => void
@@ -462,6 +482,7 @@ function SortableJobCard({
         dragListeners={listeners}
         onDelete={onDelete}
         onRetry={onRetry}
+        onPromote={onPromote}
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
         onViewDetail={onViewDetail}
@@ -518,8 +539,10 @@ function SwimLane({
   jobs,
   sortableIds,
   isDropTarget,
+  dropTargetLabel,
   onDelete,
   onRetry,
+  onPromote,
   selectedIds,
   onToggleSelect,
   onSelectAll,
@@ -532,8 +555,10 @@ function SwimLane({
   jobs: ScrapeJob[]
   sortableIds?: string[]
   isDropTarget?: boolean
+  dropTargetLabel?: string
   onDelete?: (id: string) => void
   onRetry?: (id: string) => void
+  onPromote?: (id: string) => void
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onSelectAll?: (jobIds: string[]) => void
@@ -627,7 +652,9 @@ function SwimLane({
             )}
             {title}
             {isDropTarget && (
-              <span className="ml-1.5 text-xs text-blue-500 font-normal">Drop to retry</span>
+              <span className="ml-1.5 text-xs text-blue-500 font-normal">
+                {dropTargetLabel ?? 'Drop here'}
+              </span>
             )}
           </span>
           <div className="flex items-center gap-1.5">
@@ -676,6 +703,7 @@ function SwimLane({
                       sortableId={sortId}
                       onDelete={onDelete}
                       onRetry={onRetry}
+                      onPromote={onPromote}
                       isSelected={selectedIds.has(job.id)}
                       onToggleSelect={onToggleSelect}
                       onViewDetail={onViewDetail}
@@ -693,6 +721,7 @@ function SwimLane({
               job={job}
               onDelete={onDelete}
               onRetry={onRetry}
+              onPromote={onPromote}
               isSelected={selectedIds.has(job.id)}
               onToggleSelect={onToggleSelect}
               onViewDetail={onViewDetail}
@@ -719,11 +748,12 @@ function findContainer(
   id: string,
   waitingIds: string[],
   failedIds: string[],
-): 'waiting' | 'failed' | null {
+): 'waiting' | 'failed' | 'active' | null {
   if (waitingIds.includes(id)) return 'waiting'
   if (failedIds.includes(id)) return 'failed'
   if (id === 'lane:waiting') return 'waiting'
   if (id === 'lane:failed') return 'failed'
+  if (id === 'lane:active') return 'active'
   return null
 }
 
@@ -808,6 +838,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
   const [pauseQueue, { isLoading: isPausing }] = usePauseQueueMutation()
   const [resumeQueue, { isLoading: isResuming }] = useResumeQueueMutation()
   const [retryJobMutation] = useRetryScrapeJobMutation()
+  const [promoteJobMutation] = usePromoteScrapeJobMutation()
   const [cancelJobMutation] = useCancelScrapeJobMutation()
 
   const queue = scraperType ? healthData?.queues.find(q => q.name === scraperType) : undefined
@@ -908,6 +939,13 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
       retryJobMutation(id)
     },
     [retryJobMutation],
+  )
+
+  const handlePromote = useCallback(
+    (id: string) => {
+      promoteJobMutation(id)
+    },
+    [promoteJobMutation],
   )
 
   const toggleSelect = useCallback((id: string) => {

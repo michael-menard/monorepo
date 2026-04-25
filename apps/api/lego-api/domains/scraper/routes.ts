@@ -446,6 +446,42 @@ scraper.post('/jobs/:id/retry', async c => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────
+// POST /scraper/jobs/:id/promote — Move a waiting job to front of queue
+// ─────────────────────────────────────────────────────────────────────────
+
+scraper.post('/jobs/:id/promote', async c => {
+  const jobId = c.req.param('id')
+
+  for (const queueName of getAllQueueNames()) {
+    const queue = getQueue(queueName)
+    const job = await queue.getJob(jobId)
+    if (job) {
+      const state = await job.getState()
+
+      if (state === 'delayed') {
+        await job.promote()
+      } else if (state === 'waiting') {
+        await job.changePriority({ priority: 1, lifo: true })
+      } else {
+        return c.json(
+          {
+            error: 'INVALID_STATE',
+            message: `Job is ${state}, only waiting/delayed jobs can be promoted`,
+          },
+          409,
+        )
+      }
+
+      const type = queueName.replace('scrape-', '')
+      logger.info('Scrape job promoted to front of queue', undefined, { jobId, queueName })
+      return c.json({ success: true, status: 'waiting', type })
+    }
+  }
+
+  return c.json({ error: 'NOT_FOUND' }, 404)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
 // GET /scraper/queues — Queue health + circuit breaker status
 // ─────────────────────────────────────────────────────────────────────────
 
