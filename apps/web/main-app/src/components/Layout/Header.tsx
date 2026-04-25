@@ -82,10 +82,10 @@ export function Header({ showBreadcrumbs = false }: HeaderProps) {
                 <Blocks className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="hidden sm:flex flex-col">
-                <span className="font-bold text-base leading-tight tracking-wide text-foreground">
+                <span className="font-heading font-bold text-base leading-tight tracking-wide text-foreground">
                   LEGO MOC
                 </span>
-                <span className="text-[10px] text-muted-foreground leading-none tracking-wider uppercase">
+                <span className="font-sans text-[10px] text-muted-foreground leading-none tracking-wider uppercase">
                   Instructions
                 </span>
               </div>

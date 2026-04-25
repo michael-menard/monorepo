@@ -1,0 +1,65 @@
+/*
+ * Self-hosted font declarations
+ * ==============================
+ * All fonts are variable-weight woff2 files stored in ../fonts/
+ *
+ * Families:
+ *   - Cormorant Garamond (serif)  — headings
+ *   - Lora (serif)                — body text
+ *   - Geist (sans-serif)          — UI elements
+ *   - Geist Mono (monospace)      — code / data
+ */
+
+/* Cormorant Garamond — roman */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/CormorantGaramond-roman.woff2') format('woff2');
+}
+
+/* Cormorant Garamond — italic */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/CormorantGaramond-italic.woff2') format('woff2');
+}
+
+/* Lora — roman */
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/Lora-roman.woff2') format('woff2');
+}
+
+/* Lora — italic */
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../fonts/Lora-italic.woff2') format('woff2');
+}
+
+/* Geist — variable sans-serif */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geist-Variable.woff2') format('woff2');
+}
+
+/* Geist Mono — variable monospace */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/GeistMono-Variable.woff2') format('woff2');
+}

@@ -350,6 +350,33 @@ export {
 } from './stacks/__types__'
 export type { StackItem, BaseStackProps, ExpandableStackProps } from './stacks/__types__'
 
+// Patterns (composed from primitives, data-driven)
+export { StatCards } from './patterns/StatCards'
+export { ActivityList } from './patterns/ActivityList'
+export { GaugeChart } from './patterns/GaugeChart'
+export { DashboardLayout } from './patterns/DashboardLayout'
+export {
+  StatCardItemSchema,
+  StatCardsPropsSchema,
+  ActivityListItemSchema,
+  TimelineGroupSchema,
+  ActivityListImagePropsSchema,
+  ActivityListTimelinePropsSchema,
+  GaugeChartPropsSchema,
+  DashboardLayoutPropsSchema,
+} from './patterns/__types__'
+export type {
+  StatCardItem,
+  StatCardsProps,
+  ActivityListItem,
+  TimelineGroup,
+  ActivityListImageProps,
+  ActivityListTimelineProps,
+  ActivityListProps,
+  GaugeChartProps,
+  DashboardLayoutProps,
+} from './patterns/__types__'
+
 // =============================================================================
 // HOOKS
 // =============================================================================
@@ -456,13 +483,7 @@ export { AppToggleGroup, AppToggleGroupItem } from './toggles/AppToggleGroup'
 export type { AppToggleGroupProps, AppToggleGroupItemProps } from './toggles/AppToggleGroup'
 
 // Tooltip
-export {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-  TooltipPortal,
-} from './_primitives/tooltip'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './_primitives/tooltip'
 
 // Accordion
 export {

@@ -133,7 +133,7 @@ export function MobileSidebar() {
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <Blocks className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <span className="font-bold text-sm">LEGO MOC</span>
+                <span className="font-heading font-bold text-sm">LEGO MOC</span>
               </Link>
               <Button
                 variant="ghost"
@@ -150,7 +150,7 @@ export function MobileSidebar() {
             <nav className="flex-1 overflow-y-auto p-4 space-y-6">
               {/* Main navigation */}
               <div>
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+                <h2 className="font-sans text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
                   Navigation
                 </h2>
                 <div className="space-y-1">
@@ -178,7 +178,7 @@ export function MobileSidebar() {
 
               {/* Account navigation */}
               <div>
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+                <h2 className="font-sans text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
                   Account
                 </h2>
                 <div className="space-y-1">

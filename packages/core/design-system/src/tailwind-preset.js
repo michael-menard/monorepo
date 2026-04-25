@@ -3,65 +3,79 @@
 module.exports = {
   theme: {
     extend: {
-      // Dark Academia Color Palette
+      // Dark Academia Color Palette (oklch)
       colors: {
-        // Semantic colors (from CSS variables)
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        // Semantic colors (parameter-only CSS variables wrapped in oklch)
+        border: 'oklch(var(--border))',
+        input: 'oklch(var(--input))',
+        ring: 'oklch(var(--ring))',
+        background: 'oklch(var(--background))',
+        foreground: 'oklch(var(--foreground))',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: 'oklch(var(--primary))',
+          foreground: 'oklch(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: 'oklch(var(--secondary))',
+          foreground: 'oklch(var(--secondary-foreground))',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'oklch(var(--destructive))',
+          foreground: 'oklch(var(--destructive-foreground))',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'oklch(var(--muted))',
+          foreground: 'oklch(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'oklch(var(--accent))',
+          foreground: 'oklch(var(--accent-foreground))',
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: 'oklch(var(--popover))',
+          foreground: 'oklch(var(--popover-foreground))',
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: 'oklch(var(--card))',
+          foreground: 'oklch(var(--card-foreground))',
+        },
+
+        // Semantic feedback colors
+        success: {
+          DEFAULT: 'oklch(var(--success))',
+          foreground: 'oklch(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'oklch(var(--warning))',
+          foreground: 'oklch(var(--warning-foreground))',
+        },
+        info: {
+          DEFAULT: 'oklch(var(--info))',
+          foreground: 'oklch(var(--info-foreground))',
         },
 
         // Chart colors
         chart: {
-          1: 'hsl(var(--chart-1))',
-          2: 'hsl(var(--chart-2))',
-          3: 'hsl(var(--chart-3))',
-          4: 'hsl(var(--chart-4))',
-          5: 'hsl(var(--chart-5))',
+          1: 'oklch(var(--chart-1))',
+          2: 'oklch(var(--chart-2))',
+          3: 'oklch(var(--chart-3))',
+          4: 'oklch(var(--chart-4))',
+          5: 'oklch(var(--chart-5))',
         },
 
         // Sidebar colors
         sidebar: {
-          DEFAULT: 'hsl(var(--sidebar))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
+          DEFAULT: 'oklch(var(--sidebar))',
+          foreground: 'oklch(var(--sidebar-foreground))',
+          primary: 'oklch(var(--sidebar-primary))',
+          'primary-foreground': 'oklch(var(--sidebar-primary-foreground))',
+          accent: 'oklch(var(--sidebar-accent))',
+          'accent-foreground': 'oklch(var(--sidebar-accent-foreground))',
+          border: 'oklch(var(--sidebar-border))',
+          ring: 'oklch(var(--sidebar-ring))',
         },
 
-        // Foundation color scales (from CSS variables)
+        // Foundation color scales (direct oklch values from CSS variables)
         teal: {
           100: 'var(--color-teal-100)',
           400: 'var(--color-teal-400)',
@@ -88,12 +102,6 @@ module.exports = {
           DEFAULT: 'var(--color-neutral-500)',
         },
 
-        // Semantic Colors
-        success: 'var(--color-success)',
-        warning: 'var(--color-warning)',
-        error: 'var(--color-error)',
-        info: 'var(--color-info)',
-
         // Additional Accents
         clay: 'var(--color-clay)',
         'dusty-blue': 'var(--color-dusty-blue)',
@@ -118,9 +126,11 @@ module.exports = {
         },
       },
 
-      // Typography
+      // Typography — Dark Academia font stack
       fontFamily: {
-        primary: ['var(--font-primary)'],
+        heading: ['var(--font-heading)'],
+        body: ['var(--font-body)'],
+        sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
       },
 
@@ -190,12 +200,9 @@ module.exports = {
         'slide-out': 'slideOut 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'scale-out': 'scaleOut 0.2s ease-out',
-        // Subtle bounce for UI accents
         'bounce-subtle': 'bounceSubtle 0.6s ease-in-out',
-        // Cyberpunk spinner animations
         'spin-slow': 'spinSlow 3s linear infinite',
         'spin-slower': 'spinSlower 6s linear infinite',
-        // Glow pulse for status indicators
         'glow-pulse': 'glowPulse 2s ease-in-out infinite',
       },
 
@@ -228,7 +235,6 @@ module.exports = {
           '0%': { transform: 'scale(1)', opacity: '1' },
           '100%': { transform: 'scale(0.95)', opacity: '0' },
         },
-        // Cyberpunk spinner keyframes
         spinSlow: {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
@@ -237,7 +243,6 @@ module.exports = {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(-360deg)' },
         },
-        // Glow pulse for live indicators
         glowPulse: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
@@ -251,7 +256,6 @@ module.exports = {
         md: 'var(--shadow-md)',
         lg: 'var(--shadow-lg)',
         xl: 'var(--shadow-xl)',
-        // Cyberpunk glow shadows
         'glow-primary': 'var(--shadow-glow-primary)',
         'glow-accent': 'var(--shadow-glow-accent)',
       },

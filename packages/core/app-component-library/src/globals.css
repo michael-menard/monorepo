@@ -14,13 +14,13 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    border-color: oklch(var(--border));
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-primary);
+    background-color: oklch(var(--background));
+    color: oklch(var(--foreground));
+    font-family: var(--font-body);
     font-optical-sizing: auto;
     font-style: normal;
     -webkit-font-smoothing: antialiased;

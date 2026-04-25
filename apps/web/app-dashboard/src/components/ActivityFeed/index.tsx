@@ -79,7 +79,7 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
   }
 
   return (
-    <Card className="bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
+    <Card className="h-full bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
       <CardHeader className="pb-2 px-4 md:px-6">
         <CardTitle className="flex items-center gap-2 text-base md:text-lg font-semibold text-card-foreground">
           <Activity className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" aria-hidden="true" />

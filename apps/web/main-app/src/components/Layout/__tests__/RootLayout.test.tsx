@@ -58,6 +58,8 @@ vi.mock('lucide-react', async () => {
     BookOpen: () => React.createElement('svg', { 'data-testid': 'book-open-icon' }),
     Package: () => React.createElement('svg', { 'data-testid': 'package-icon' }),
     Lightbulb: () => React.createElement('svg', { 'data-testid': 'lightbulb-icon' }),
+    PersonStanding: () => React.createElement('svg', { 'data-testid': 'person-standing-icon' }),
+    ShoppingCart: () => React.createElement('svg', { 'data-testid': 'shopping-cart-icon' }),
   }
 })
 
@@ -91,8 +93,18 @@ vi.mock('../MainArea', () => ({
   ),
 }))
 
-vi.mock('@/services/auth/AuthProvider', () => ({
-  AuthProvider: ({ children }: any) => <div data-testid="auth-provider">{children}</div>,
+vi.mock('@/services/auth/AuthProvider', () => {
+  const React = require('react')
+  const AuthContext = React.createContext(null)
+  return {
+    AuthProvider: ({ children }: any) => <div data-testid="auth-provider">{children}</div>,
+    AuthContext,
+    useAuth: () => ({ signOut: vi.fn() }),
+  }
+})
+
+vi.mock('@/services/auth/DevAuthProvider', () => ({
+  DevAuthProvider: ({ children }: any) => <div data-testid="dev-auth-provider">{children}</div>,
 }))
 
 // Mock hooks
@@ -113,7 +125,10 @@ describe('RootLayout', () => {
     it('should render children inside MainArea when not authenticated', () => {
       render(<RootLayout />)
 
-      expect(screen.getByTestId('auth-provider')).toBeInTheDocument()
+      // In test mode VITE_AUTH_BYPASS may route to DevAuthProvider
+      const authProvider =
+        screen.queryByTestId('auth-provider') || screen.queryByTestId('dev-auth-provider')
+      expect(authProvider).toBeInTheDocument()
       expect(screen.getByTestId('main-area')).toBeInTheDocument()
     })
 

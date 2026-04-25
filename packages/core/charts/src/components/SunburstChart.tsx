@@ -71,24 +71,24 @@ export const SunburstChart: React.FC<SunburstChartProps> = ({
       .innerRadius(d => Math.max(d.y0 * 0.85, d.depth === 1 ? radius * 0.22 : d.y0 * 0.85))
       .outerRadius(d => d.y1 * 0.85 - 1)
 
-    // Read computed CSS variable as a color string
+    // Read computed CSS variable as a color string (oklch parameter-only format)
     const rootStyles = getComputedStyle(document.documentElement)
-    const hslVar = (name: string, fallback: string) => {
+    const oklchVar = (name: string, fallback: string) => {
       const val = rootStyles.getPropertyValue(name).trim()
-      return val ? `hsl(${val})` : fallback
+      return val ? `oklch(${val})` : fallback
     }
 
     // Resolved text colors for SVG labels (can't rely on CSS vars in inline SVG styles)
-    const foregroundColor = hslVar('--foreground', '#2e3b2d')
-    const mutedFgColor = hslVar('--muted-foreground', '#4a7175')
+    const foregroundColor = oklchVar('--foreground', '#2e3b2d')
+    const mutedFgColor = oklchVar('--muted-foreground', '#4a7175')
 
     // Color scale for themes (level 1) — Dark Academia palette
     const themeColors = [
-      hslVar('--chart-1', '#3d5a2e'), // olive green
-      hslVar('--chart-2', '#9b3a3a'), // burgundy
-      hslVar('--chart-3', '#b8893a'), // golden ochre
-      hslVar('--chart-4', '#2e3b2d'), // dark olive-gray
-      hslVar('--chart-5', '#4a7175'), // slate-teal
+      oklchVar('--chart-1', '#3d5a2e'), // olive green
+      oklchVar('--chart-2', '#9b3a3a'), // burgundy
+      oklchVar('--chart-3', '#b8893a'), // golden ochre
+      oklchVar('--chart-4', '#2e3b2d'), // dark olive-gray
+      oklchVar('--chart-5', '#4a7175'), // slate-teal
       '#6b7e68', // deep sage
       '#8b6f4e', // warm clay
       '#5c6b52', // moss

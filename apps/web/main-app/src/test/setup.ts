@@ -467,6 +467,16 @@ vi.mock('@repo/app-component-library', () => ({
   AppAlertDialogTitle: vi.fn(({ children, ...props }) =>
     React.createElement('h2', { ...props }, children),
   ),
+  // Layout components
+  ContentArea: vi.fn(({ children, className, ...props }) =>
+    React.createElement('main', { className, ...props }, children),
+  ),
+  ContentSection: vi.fn(({ children, className, ...props }) =>
+    React.createElement('section', { className, ...props }, children),
+  ),
+  ContentHeader: vi.fn(({ children, className, ...props }) =>
+    React.createElement('header', { className, ...props }, children),
+  ),
 }))
 
 // Mock Framer Motion
@@ -834,6 +844,13 @@ vi.mock('lucide-react', () => ({
   UserX: vi.fn(props => React.createElement('svg', { 'data-testid': 'user-x-icon', ...props })),
   KeySquare: vi.fn(props =>
     React.createElement('svg', { 'data-testid': 'key-square-icon', ...props }),
+  ),
+  // Shell navigation icons
+  PersonStanding: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'person-standing-icon', ...props }),
+  ),
+  ShoppingCart: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'shopping-cart-icon', ...props }),
   ),
 }))
 

@@ -66,18 +66,18 @@ export function MainPage({ className }: MainPageProps) {
         {/* Quick Actions — Add MOC button moved to Instructions tab */}
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-          {/* Row 1: Theme Chart (2 cols) + Activity Feed (1 col) */}
-          <section aria-label="MOCs by theme breakdown" className="md:col-span-1 xl:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_350px] gap-4 md:gap-6">
+          {/* Row 1: Theme Chart + Activity Feed */}
+          <section aria-label="MOCs by theme breakdown" className="min-h-0">
             <ThemeChart data={themeBreakdown} isLoading={isLoading} />
           </section>
 
-          <section aria-label="Recent activity timeline">
+          <section aria-label="Recent activity timeline" className="min-h-0">
             <ActivityFeed activities={activityFeed} isLoading={isLoading} />
           </section>
 
           {/* Row 2: Recent MOCs (full width) */}
-          <section aria-label="Recently added MOCs" className="md:col-span-2 xl:col-span-3">
+          <section aria-label="Recently added MOCs" className="col-span-full">
             <RecentMocsGrid mocs={recentMocs} isLoading={isLoading} />
           </section>
         </div>

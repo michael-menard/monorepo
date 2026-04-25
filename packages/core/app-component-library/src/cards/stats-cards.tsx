@@ -13,8 +13,8 @@ import { cn } from '../_lib/utils'
  * Individual stat item configuration
  */
 export interface StatItem {
-  /** Lucide icon component */
-  icon: React.ElementType
+  /** Lucide icon component (optional) */
+  icon?: React.ElementType
   /** Display label for the stat */
   label: string
   /** Numeric value to display */
@@ -23,6 +23,8 @@ export interface StatItem {
   colorClass?: string
   /** Tailwind background class for icon container (e.g., 'bg-red-500/10') */
   bgClass?: string
+  /** CSS gradient string for card background (e.g., 'linear-gradient(135deg, rgba(255,0,0,0.1), transparent)') */
+  gradient?: string
 }
 
 export interface StatsCardsProps {
@@ -89,7 +91,6 @@ function StatCard({ config, index }: { config: StatCardConfig; index: number }) 
       <Card
         className={cn(
           'flex h-full flex-col gap-4 p-6 transition-all duration-200 ease-in-out',
-          // Cyberpunk translucent surface
           'bg-card/80 dark:bg-surface backdrop-blur-sm',
           'border border-border dark:border-surface-border',
           // Hover effects - glow border, NO scale transform
@@ -97,21 +98,29 @@ function StatCard({ config, index }: { config: StatCardConfig; index: number }) 
           'hover:shadow-md dark:hover:shadow-glow-primary',
           'cursor-default',
         )}
+        style={config.gradient ? { backgroundImage: config.gradient } : undefined}
       >
-        <div
-          className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg',
-            config.bgClass || 'bg-primary/10',
-          )}
-        >
-          <Icon className={cn('h-6 w-6', config.colorClass || 'text-primary')} aria-hidden="true" />
-        </div>
+        {Icon ? (
+          <div
+            className={cn(
+              'flex h-10 w-10 items-center justify-center rounded-lg',
+              config.bgClass || 'bg-primary/10',
+            )}
+          >
+            <Icon
+              className={cn('h-6 w-6', config.colorClass || 'text-primary')}
+              aria-hidden="true"
+            />
+          </div>
+        ) : null}
 
-        <div className="flex flex-col gap-1">
-          <motion.div className="text-3xl font-bold leading-none" aria-live="polite">
+        <div className="flex items-baseline gap-3">
+          <motion.div className="text-6xl font-bold leading-none" aria-live="polite">
             <AnimatedCounter value={config.value} delay={index * 0.1} />
           </motion.div>
-          <h3 className="text-sm font-medium text-muted-foreground leading-none">{config.label}</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground leading-none">
+            {config.label}
+          </h3>
         </div>
       </Card>
     </motion.article>
@@ -133,7 +142,6 @@ function LoadingSkeleton({ count = 3 }: { count?: number }) {
             'border border-border dark:border-surface-border',
           )}
         >
-          <div className="h-10 w-10 rounded-lg bg-muted" />
           <div className="flex flex-col gap-2">
             <div className="h-8 w-20 rounded bg-muted" />
             <div className="h-4 w-28 rounded bg-muted" />

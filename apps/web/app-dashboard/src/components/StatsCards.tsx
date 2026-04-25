@@ -5,7 +5,6 @@
 
 import { StatsCards as BaseStatsCards } from '@repo/app-component-library'
 import type { StatItem } from '@repo/app-component-library'
-import { Blocks, Box, Palette, Hammer, User, Wrench } from 'lucide-react'
 import type { DashboardStats } from '@repo/api-client/rtk/dashboard-api'
 import type { DashboardStatsExtended } from '../__types__'
 
@@ -38,50 +37,32 @@ export function StatsCards({
 }: DashboardStatsCardsProps) {
   const items: StatItem[] = [
     {
-      icon: Blocks,
       label: 'Total MOCs',
       value: stats.totalMocs,
-      colorClass: 'text-lego-red',
-      bgClass: 'bg-lego-red/10',
     },
     {
-      icon: Box,
       label: 'Owned Sets',
       value: stats.ownedSetsCount ?? 0,
-      colorClass: 'text-lego-blue',
-      bgClass: 'bg-lego-blue/10',
     },
     {
-      icon: User,
       label: 'Minifigs',
       value: stats.ownedMinifigsCount ?? 0,
-      colorClass: 'text-lego-green',
-      bgClass: 'bg-lego-green/10',
     },
     {
-      icon: Palette,
       label: 'Themes',
       value: stats.themeCount,
-      colorClass: 'text-lego-yellow',
-      bgClass: 'bg-lego-yellow/10',
     },
     {
-      icon: Wrench,
       label: 'Planned Builds',
       value: stats.plannedBuildsCount ?? 0,
-      colorClass: 'text-orange-600 dark:text-orange-400',
-      bgClass: 'bg-orange-600/10 dark:bg-orange-400/10',
     },
   ]
 
   // Add build progress if available
   if (hasProgress(stats)) {
     items.push({
-      icon: Hammer,
       label: 'Built %',
       value: stats.buildProgress,
-      colorClass: 'text-emerald-600 dark:text-emerald-400',
-      bgClass: 'bg-emerald-600/10 dark:bg-emerald-400/10',
     })
   }
 

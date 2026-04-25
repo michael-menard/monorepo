@@ -129,7 +129,6 @@ const OverlaySpinner = ({
         role="status"
         aria-label="Loading page"
       >
-        {/* LEGO brick-inspired loading animation */}
         <motion.div
           className="flex flex-col items-center gap-4"
           initial={{ scale: 0.9, opacity: 0 }}
@@ -137,35 +136,7 @@ const OverlaySpinner = ({
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {/* LEGO brick stack animation */}
-          <div className="flex gap-1.5">
-            {['bg-red-500', 'bg-blue-500', 'bg-yellow-500', 'bg-green-500'].map((color, i) => (
-              <motion.div
-                key={i}
-                className={cn(
-                  'h-6 w-6 rounded-md shadow-lg flex items-center justify-center',
-                  color,
-                )}
-                animate={{
-                  y: [0, -8, 0],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 0.6,
-                  repeat: Infinity,
-                  delay: i * 0.1,
-                  ease: 'easeInOut',
-                }}
-              >
-                {/* LEGO stud */}
-                <div className="h-2.5 w-2.5 rounded-full bg-white/70 shadow-inner" />
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Fallback spinner for accessibility */}
-          <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
-
+          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
           <span className="sr-only">Loading...</span>
         </motion.div>
       </motion.div>

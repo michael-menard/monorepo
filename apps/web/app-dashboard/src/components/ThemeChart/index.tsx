@@ -59,7 +59,7 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
   }
 
   return (
-    <Card className="bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
+    <Card className="h-full bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
       <CardHeader className="pb-2 px-4 md:px-6">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base md:text-lg font-semibold text-card-foreground">

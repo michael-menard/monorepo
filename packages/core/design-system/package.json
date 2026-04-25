@@ -9,6 +9,7 @@
       "types": "./src/design-system.ts"
     },
     "./design-tokens.css": "./src/design-tokens.css",
+    "./fonts.css": "./src/fonts.css",
     "./global-styles.css": "./src/global-styles.css",
     "./tailwind-preset": "./src/tailwind-preset.js"
   },

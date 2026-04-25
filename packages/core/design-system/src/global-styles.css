@@ -1,4 +1,5 @@
-/* Import the single source of truth for tokens - must be before @tailwind */
+/* Import fonts and tokens — must be before @tailwind */
+@import './fonts.css';
 @import './design-tokens.css';
 
 @tailwind base;
@@ -7,7 +8,7 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    border-color: oklch(var(--border));
   }
 
   /* Anchor the flex height chain to the viewport */
@@ -18,9 +19,9 @@
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-primary);
+    background-color: oklch(var(--background));
+    color: oklch(var(--foreground));
+    font-family: var(--font-body);
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
@@ -29,13 +30,13 @@
   /* Focus styles for accessibility */
   *:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--ring));
+    box-shadow: 0 0 0 2px oklch(var(--ring));
   }
 
   /* Loading states */
   .loading-skeleton {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    background-color: hsl(var(--muted));
+    background-color: oklch(var(--muted));
   }
 
   /* Custom scrollbar */
@@ -45,19 +46,19 @@
   }
 
   ::-webkit-scrollbar-track {
-    background-color: hsl(var(--muted));
+    background-color: oklch(var(--muted));
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-color: oklch(var(--muted-foreground) / 0.3);
     border-radius: 6px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: oklch(var(--muted-foreground) / 0.5);
   }
 
-  /* Floating gradient blob animations (from LEGO MOC Hub v0 design) */
+  /* Floating gradient blob animations */
   @keyframes float {
     0%,
     100% {
