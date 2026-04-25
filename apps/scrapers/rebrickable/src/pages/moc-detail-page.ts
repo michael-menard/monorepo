@@ -1231,7 +1231,7 @@ export class MocDetailPage extends BasePage {
     return parts
   }
 
-  // ── Free MOC Instructions ──────────────────────────────────────────────
+  // ── Free/Paid MOC Instructions ──────────────────────────────────────────
 
   /**
    * Check whether this MOC detail page offers free downloadable instructions.
@@ -1245,6 +1245,81 @@ export class MocDetailPage extends BasePage {
       logger.info(`[moc-detail] Free instructions: ${has ? 'yes' : 'no'}`)
       return has
     } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check whether this MOC has paid/purchasable instructions.
+   * Paid MOCs display "Buy Building Instructions" text on the detail page.
+   */
+  async isPaidMoc(): Promise<boolean> {
+    try {
+      const isPaid = await this.page.evaluate(() =>
+        document.body.innerText.includes('Buy Building Instructions'),
+      )
+      logger.info(`[moc-detail] Paid MOC: ${isPaid ? 'yes' : 'no'}`)
+      return isPaid
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Unlike/unstar a MOC by clicking the like button on the detail page.
+   * When a MOC is liked, the button text contains "UNLIKE MOC".
+   * After clicking, the MOC is removed from the user's liked MOCs list.
+   */
+  async unlikeMoc(mocNumber?: string): Promise<boolean> {
+    const tag = `[moc-detail][MOC-${mocNumber ?? '?'}]`
+    try {
+      // Find the unlike button — when liked, the button says "UNLIKE MOC"
+      const unlikeBtn = await this.page.$('button:has-text("UNLIKE MOC")')
+      if (!unlikeBtn) {
+        // Also try the like button in case the text differs
+        // Check if any like button has an active/liked state class
+        const likedBtn = await this.page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button'))
+          for (const btn of buttons) {
+            const text = btn.textContent?.trim().toUpperCase() || ''
+            if (text.includes('UNLIKE')) return { found: true, text }
+          }
+          return { found: false, text: '' }
+        })
+
+        if (!likedBtn.found) {
+          logger.info(`${tag} No unlike button found — MOC may not be liked`)
+          return false
+        }
+      }
+
+      // Click the unlike button
+      await this.page.click('button:has-text("UNLIKE MOC")')
+      logger.info(`${tag} Clicked unlike button`)
+
+      // Wait briefly for the AJAX request to complete
+      await this.page.waitForTimeout(1500)
+
+      // Verify the button changed to "LIKE MOC" (unliked state)
+      const isNowUnliked = await this.page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'))
+        return buttons.some(btn => {
+          const text = btn.textContent?.trim().toUpperCase() || ''
+          return text.includes('LIKE MOC') && !text.includes('UNLIKE')
+        })
+      })
+
+      if (isNowUnliked) {
+        logger.info(`${tag} Successfully unliked MOC`)
+      } else {
+        logger.warn(`${tag} Unlike click may not have taken effect`)
+      }
+
+      return isNowUnliked
+    } catch (err) {
+      logger.warn(`${tag} Failed to unlike MOC`, {
+        error: err instanceof Error ? err.message : String(err),
+      })
       return false
     }
   }

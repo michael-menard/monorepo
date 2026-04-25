@@ -263,6 +263,18 @@ export async function runSingle(
     await waitBetweenPages()
     await steps.complete('navigate_detail')
 
+    // Skip paid MOCs — they can't be downloaded without purchase.
+    // This catches paid MOCs that were enqueued before discovery filtering was added.
+    const isPaid = await mocPage.isPaidMoc()
+    if (isPaid) {
+      logger.info(`[single] MOC-${mocNumber} is a paid MOC — skipping`)
+      await db
+        .update(scrapeRuns)
+        .set({ status: 'completed', completedAt: new Date(), skipped: 1, instructionsFound: 1 })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+      return
+    }
+
     // Scrape detail
     await steps.start('scrape_detail')
     const detail = await retry.execute(
@@ -297,13 +309,17 @@ export async function runSingle(
     }
 
     // Download files
+    // Detect whether this is a free or purchased MOC and use the right download flow
     await steps.start('download_files')
-    const fileList = await mocPage.scrapeFileList()
+    const isFree = await mocPage.hasFreeInstructions()
+    const fileList = isFree ? await mocPage.scrapeFreeFileList() : await mocPage.scrapeFileList()
     let primaryDownloadPath: string | null = null
     let totalFileSize = 0
 
     if (fileList.length > 0) {
-      logger.info(`[single] MOC-${mocNumber}: found ${fileList.length} files to download`)
+      logger.info(
+        `[single] MOC-${mocNumber}: found ${fileList.length} ${isFree ? 'free' : 'purchased'} files to download`,
+      )
 
       for (let fi = 0; fi < fileList.length; fi++) {
         const file = fileList[fi]
@@ -312,7 +328,10 @@ export async function runSingle(
         )
 
         const downloadPath = await retry.execute(
-          () => mocPage.triggerDownload(file, mocNumber),
+          () =>
+            isFree
+              ? mocPage.downloadFreeFile(file, mocNumber)
+              : mocPage.triggerDownload(file, mocNumber),
           `download MOC-${mocNumber} file ${fi + 1}`,
         )
 
@@ -486,6 +505,10 @@ export async function runSingle(
 
       await steps.complete('gallery_sync')
       await checkpoint.save(mocNumber, 'completed')
+
+      // Unlike the MOC if it's currently liked — removes it from the liked
+      // list so it won't be re-discovered in future liked-mocs runs.
+      await mocPage.unlikeMoc(mocNumber)
     } else {
       await steps.skip('upload_minio')
       await steps.skip('db_upsert')
@@ -517,6 +540,55 @@ export async function runSingle(
       logger.info(
         `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
       )
+
+      // Persist inventory parts to DB — the instruction record already exists
+      if (!options.dryRun) {
+        const invParts = normalizeParts(partsResult.parts)
+        const [inst] = await db
+          .select()
+          .from(instructionsTable)
+          .where(eq(instructionsTable.mocNumber, mocNumber))
+          .limit(1)
+
+        if (inst && invParts.length > 0) {
+          for (const p of invParts) {
+            const [part] = await db
+              .insert(partsTable)
+              .values({
+                partNumber: p.partNumber,
+                color: p.color,
+                name: p.name,
+                category: p.category,
+                imageUrl: p.imageUrl,
+              })
+              .onConflictDoUpdate({
+                target: [partsTable.partNumber, partsTable.color],
+                set: {
+                  ...(p.name ? { name: p.name } : {}),
+                  ...(p.category ? { category: p.category } : {}),
+                  ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
+                },
+              })
+              .returning()
+
+            await db
+              .insert(instructionPartsTable)
+              .values({
+                instructionId: inst.id,
+                partId: part.id,
+                quantity: p.quantity,
+                isSpare: p.isSpare ?? 0,
+              })
+              .onConflictDoUpdate({
+                target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
+                set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
+              })
+          }
+          logger.info(
+            `[single] MOC-${mocNumber}: persisted ${invParts.length} inventory parts to DB`,
+          )
+        }
+      }
     }
 
     await steps.complete('scrape_parts', {
@@ -1012,14 +1084,20 @@ export async function runPipeline(
           const mocPage = new MocDetailPage(page!)
           await retry.execute(() => mocPage.navigate(item.url), `discover MOC-${item.mocNumber}`)
 
-          const isFree = await mocPage.hasFreeInstructions()
-          if (isFree) {
-            downloadQueue.push(item)
-            logger.info(
-              `[pipeline] MOC-${item.mocNumber} "${item.title}" — FREE ✓ (queue: ${downloadQueue.length})`,
-            )
+          // Check for paid instructions first (faster — just a text check)
+          const isPaid = await mocPage.isPaidMoc()
+          if (isPaid) {
+            logger.info(`[pipeline] MOC-${item.mocNumber} "${item.title}" — PAID, skipping`)
           } else {
-            logger.info(`[pipeline] MOC-${item.mocNumber} "${item.title}" — not free, skipping`)
+            const isFree = await mocPage.hasFreeInstructions()
+            if (isFree) {
+              downloadQueue.push(item)
+              logger.info(
+                `[pipeline] MOC-${item.mocNumber} "${item.title}" — FREE ✓ (queue: ${downloadQueue.length})`,
+              )
+            } else {
+              logger.info(`[pipeline] MOC-${item.mocNumber} "${item.title}" — not free, skipping`)
+            }
           }
 
           await waitBetweenPages()
@@ -1105,6 +1183,17 @@ export async function runPipeline(
         await retry.execute(() => mocPage.navigate(item.url), `navigate MOC-${item.mocNumber}`)
 
         await waitBetweenPages()
+
+        // Guard: skip paid MOCs that slipped past discovery filtering
+        if (options.likedMocs) {
+          const isPaid = await mocPage.isPaidMoc()
+          if (isPaid) {
+            logger.info(`[pipeline] MOC-${item.mocNumber} "${item.title}" — PAID, skipping`)
+            skippedCount++
+            progress.tick(`MOC-${item.mocNumber} — skipped (paid)`)
+            continue
+          }
+        }
 
         // Scrape detail metadata (title, author, parts count)
         const detail = await retry.execute(
@@ -1368,6 +1457,11 @@ export async function runPipeline(
             await checkpoint.save(item.mocNumber, 'completed')
             downloadedCount++
 
+            // Unlike the MOC after successful scrape so it won't be re-discovered
+            if (options.likedMocs) {
+              await mocPage.unlikeMoc(item.mocNumber)
+            }
+
             progress.tick(
               `MOC-${item.mocNumber} — ${detail.title} (${fileList.length} files, ${detail.partsCount} parts, ${formatBytes(totalFileSize)})`,
             )
@@ -1393,6 +1487,55 @@ export async function runPipeline(
           logger.info(
             `[pipeline] MOC-${item.mocNumber}: scraped ${partsResult.parts.length} unique parts (${detail.partsCount} total)`,
           )
+
+          // Persist inventory parts to DB
+          if (!options.dryRun) {
+            const invParts = normalizeParts(partsResult.parts)
+            const [inst] = await db
+              .select()
+              .from(instructionsTable)
+              .where(eq(instructionsTable.mocNumber, item.mocNumber))
+              .limit(1)
+
+            if (inst && invParts.length > 0) {
+              for (const p of invParts) {
+                const [part] = await db
+                  .insert(partsTable)
+                  .values({
+                    partNumber: p.partNumber,
+                    color: p.color,
+                    name: p.name,
+                    category: p.category,
+                    imageUrl: p.imageUrl,
+                  })
+                  .onConflictDoUpdate({
+                    target: [partsTable.partNumber, partsTable.color],
+                    set: {
+                      ...(p.name ? { name: p.name } : {}),
+                      ...(p.category ? { category: p.category } : {}),
+                      ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
+                    },
+                  })
+                  .returning()
+
+                await db
+                  .insert(instructionPartsTable)
+                  .values({
+                    instructionId: inst.id,
+                    partId: part.id,
+                    quantity: p.quantity,
+                    isSpare: p.isSpare ?? 0,
+                  })
+                  .onConflictDoUpdate({
+                    target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
+                    set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
+                  })
+              }
+              logger.info(
+                `[pipeline] MOC-${item.mocNumber}: persisted ${invParts.length} inventory parts to DB`,
+              )
+            }
+          }
         }
         if (partsResult.exports.length > 0) {
           const saved = partsResult.exports.filter(e => e.filePath)
