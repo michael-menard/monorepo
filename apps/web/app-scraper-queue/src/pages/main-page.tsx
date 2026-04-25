@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Radar, Wifi, WifiOff, AlertTriangle, Pause, Play, CirclePause } from 'lucide-react'
+import {
+  Radar,
+  Wifi,
+  WifiOff,
+  AlertTriangle,
+  Pause,
+  Play,
+  CirclePause,
+  BarChart3,
+} from 'lucide-react'
 import {
   Badge,
   Button,
@@ -128,6 +137,16 @@ export function MainPage() {
           <h1 className="text-2xl font-bold tracking-tight">Scrape Queue</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+            <a
+              href={`${window.location.protocol}//${window.location.hostname}:3003/d/scraper-queue/scraper-queue?orgId=1&from=now-2d&to=now&refresh=30s`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BarChart3 className="h-3 w-3 mr-1" />
+              Grafana
+            </a>
+          </Button>
           <Button
             variant={allPaused || somePaused ? 'default' : 'outline'}
             size="sm"
