@@ -36,7 +36,25 @@ import { initBucket, uploadInstruction, uploadImage, listImages } from '../stora
 import { normalizeParts } from '../data/normalizer.js'
 import { enrichScrapeRun } from '../data/enricher.js'
 import { ProgressTracker } from '../utils/progress.js'
+import { StepTracker } from '../utils/step-tracker.js'
 import type { CliOptions } from '../__types__/index.js'
+
+const NOTIFICATIONS_URL = process.env.NOTIFICATIONS_SERVER_URL || 'http://localhost:3098'
+const HMAC_SECRET = process.env.NOTIFICATIONS_HMAC_SECRET || ''
+
+const MOC_SINGLE_STEPS = [
+  { id: 'browser_launch', label: 'Launch browser' },
+  { id: 'session_validate', label: 'Validate session' },
+  { id: 'navigate_detail', label: 'Navigate to MOC page' },
+  { id: 'scrape_detail', label: 'Scrape metadata' },
+  { id: 'scrape_images', label: 'Download images' },
+  { id: 'download_files', label: 'Download instruction files' },
+  { id: 'upload_minio', label: 'Upload to storage' },
+  { id: 'db_upsert', label: 'Save to database' },
+  { id: 'gallery_sync', label: 'Sync gallery' },
+  { id: 'scrape_parts', label: 'Scrape parts inventory' },
+  { id: 'enrichment', label: 'Enrich data' },
+]
 import type { Browser, BrowserContext, Page } from 'playwright'
 
 /**
@@ -191,6 +209,16 @@ export async function runSingle(
       .returning()
     const scrapeRunId = run.id
     const checkpoint = new CheckpointManager(scrapeRunId)
+    const steps = new StepTracker({
+      jobId: options.jobId,
+      scrapeRunId,
+      mocNumber,
+      scraperType: 'rebrickable-moc-single',
+      notificationsUrl: NOTIFICATIONS_URL,
+      hmacSecret: HMAC_SECRET,
+      db,
+    })
+    await steps.plan(MOC_SINGLE_STEPS)
 
     // Skip if already completed (unless --force)
     if (!options.force && (await checkpoint.isCompleted(mocNumber))) {
@@ -203,6 +231,7 @@ export async function runSingle(
     }
 
     // Launch browser
+    await steps.start('browser_launch')
     const isFirstRun = !hasExistingSession()
     const browserResult = await createStealthBrowser({
       headed: options.headed || isFirstRun,
@@ -210,8 +239,10 @@ export async function runSingle(
     browser = browserResult.browser
     context = browserResult.context
     page = browserResult.page
+    await steps.complete('browser_launch')
 
     // Login
+    await steps.start('session_validate')
     const loginPage = new LoginPage(page)
     const sessionValid = await loginPage.checkSessionValid()
     if (!sessionValid) {
@@ -219,23 +250,31 @@ export async function runSingle(
       await loginPage.login(config.username, config.password)
       await saveSession(context)
     }
+    await steps.complete('session_validate', { hadValidSession: sessionValid })
 
     await db.update(scrapeRuns).set({ instructionsFound: 1 }).where(eq(scrapeRuns.id, scrapeRunId))
 
     // Navigate to MOC detail
+    await steps.start('navigate_detail')
     await rateLimiter.acquire()
     await humanWait('thinking')
     const mocPage = new MocDetailPage(page)
     await retry.execute(() => mocPage.navigate(mocUrl), `navigate MOC-${mocNumber}`)
     await waitBetweenPages()
+    await steps.complete('navigate_detail')
 
     // Scrape detail
+    await steps.start('scrape_detail')
     const detail = await retry.execute(
       () => mocPage.scrapeDetail(mocNumber),
       `scrape MOC-${mocNumber}`,
     )
 
+    await steps.complete('scrape_detail', { title: detail.title, partsCount: detail.partsCount })
+
+    await steps.start('scrape_images')
     const images = await mocPage.scrapeImages(mocNumber)
+    await steps.complete('scrape_images', { imagesFound: images.length })
     if (images.length > 0) {
       logger.info(`[single] MOC-${mocNumber}: downloaded ${images.length} images`)
     }
@@ -258,6 +297,7 @@ export async function runSingle(
     }
 
     // Download files
+    await steps.start('download_files')
     const fileList = await mocPage.scrapeFileList()
     let primaryDownloadPath: string | null = null
     let totalFileSize = 0
@@ -291,8 +331,13 @@ export async function runSingle(
         }
       }
     }
+    await steps.complete('download_files', { filesFound: fileList.length, totalFileSize })
 
     if (primaryDownloadPath) {
+      // Uploads happened inline during download — mark upload_minio as done
+      await steps.start('upload_minio')
+      await steps.complete('upload_minio', { filesUploaded: fileList.length })
+
       const buffer = await readFile(primaryDownloadPath)
       const contentHash = computeHash(buffer)
       const fileName = basename(primaryDownloadPath)
@@ -307,6 +352,7 @@ export async function runSingle(
       })
       await checkpoint.save(mocNumber, 'uploaded')
 
+      await steps.start('db_upsert')
       const normalizedParts = normalizeParts(detail.parts)
 
       const instructionResult = await db
@@ -394,7 +440,10 @@ export async function runSingle(
         )
       }
 
+      await steps.complete('db_upsert', { partsLinked: normalizedParts.length })
+
       // Gallery sync
+      await steps.start('gallery_sync')
       if (syncUserId) {
         const galleryParts: GalleryPartData[] = normalizedParts.map(p => ({
           partNumber: p.partNumber,
@@ -435,8 +484,12 @@ export async function runSingle(
         }
       }
 
+      await steps.complete('gallery_sync')
       await checkpoint.save(mocNumber, 'completed')
     } else {
+      await steps.skip('upload_minio')
+      await steps.skip('db_upsert')
+      await steps.skip('gallery_sync')
       logger.warn(`[single] No files downloaded for MOC-${mocNumber}`)
     }
 
@@ -458,6 +511,7 @@ export async function runSingle(
     }
 
     // Scrape parts from inventory tab
+    await steps.start('scrape_parts')
     const partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
     if (partsResult.parts.length > 0) {
       logger.info(
@@ -465,7 +519,13 @@ export async function runSingle(
       )
     }
 
+    await steps.complete('scrape_parts', {
+      partsFound: partsResult.parts.length,
+      exports: partsResult.exports.length,
+    })
+
     // Enrichment
+    await steps.start('enrichment')
     if (!options.dryRun) {
       const summary = await enrichScrapeRun(scrapeRunId)
       await db
@@ -484,6 +544,7 @@ export async function runSingle(
         .set({ status: 'completed', completedAt: new Date(), downloaded: 1 })
         .where(eq(scrapeRuns.id, scrapeRunId))
     }
+    await steps.complete('enrichment')
 
     logger.info(`[single] MOC-${mocNumber} — complete`)
   } catch (error) {

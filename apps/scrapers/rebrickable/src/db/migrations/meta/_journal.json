@@ -15,6 +15,13 @@
       "when": 1774308101938,
       "tag": "0001_black_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777091131705,
+      "tag": "0002_chemical_prima",
+      "breakpoints": true
     }
   ]
 }

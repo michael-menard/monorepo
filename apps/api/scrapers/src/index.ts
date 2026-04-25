@@ -340,7 +340,7 @@ function createWorkers() {
       const moc = job.data.mocNumber
       logger.info(`[worker:rebrickable-moc-single] Processing MOC-${moc}`, { jobId: job.id })
       await job.updateProgress({ stage: `Scraping MOC-${moc}...` })
-      const result = await processRebrickableMocSingle(job.data)
+      const result = await processRebrickableMocSingle(job.data, job.id)
       await handleRateLimit(queues.rebrickableMocSingle, result, result.mocNumber)
       if (!result.success) throw new Error(result.error || 'Scrape failed')
       return result

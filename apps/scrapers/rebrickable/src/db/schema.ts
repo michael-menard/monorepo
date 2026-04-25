@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, timestamp, integer, jsonb, uniqueIndex } from 'drizzle-orm/pg-core'
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  integer,
+  jsonb,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core'
 
 export const scrapeRuns = pgTable('scrape_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -39,32 +48,61 @@ export const instructions = pgTable('instructions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const parts = pgTable('parts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  partNumber: text('part_number').notNull(),
-  color: text('color').notNull().default(''),
-  name: text('name').notNull().default(''),
-  category: text('category').notNull().default(''),
-  imageUrl: text('image_url').notNull().default(''),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, table => [
-  uniqueIndex('parts_part_number_color_idx').on(table.partNumber, table.color),
-])
+export const parts = pgTable(
+  'parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partNumber: text('part_number').notNull(),
+    color: text('color').notNull().default(''),
+    name: text('name').notNull().default(''),
+    category: text('category').notNull().default(''),
+    imageUrl: text('image_url').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => [uniqueIndex('parts_part_number_color_idx').on(table.partNumber, table.color)],
+)
 
-export const instructionParts = pgTable('instruction_parts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  instructionId: uuid('instruction_id')
-    .notNull()
-    .references(() => instructions.id, { onDelete: 'cascade' }),
-  partId: uuid('part_id')
-    .notNull()
-    .references(() => parts.id, { onDelete: 'cascade' }),
-  quantity: integer('quantity').notNull().default(1),
-  isSpare: integer('is_spare').notNull().default(0),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, table => [
-  uniqueIndex('instruction_parts_instruction_part_idx').on(table.instructionId, table.partId),
-])
+export const instructionParts = pgTable(
+  'instruction_parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    instructionId: uuid('instruction_id')
+      .notNull()
+      .references(() => instructions.id, { onDelete: 'cascade' }),
+    partId: uuid('part_id')
+      .notNull()
+      .references(() => parts.id, { onDelete: 'cascade' }),
+    quantity: integer('quantity').notNull().default(1),
+    isSpare: integer('is_spare').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => [
+    uniqueIndex('instruction_parts_instruction_part_idx').on(table.instructionId, table.partId),
+  ],
+)
+
+export const scrapeStepEvents = pgTable(
+  'scrape_step_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    jobId: text('job_id'),
+    scrapeRunId: uuid('scrape_run_id').references(() => scrapeRuns.id),
+    mocNumber: text('moc_number'),
+    scraperType: text('scraper_type').notNull(),
+    eventType: text('event_type').notNull(),
+    stepId: text('step_id'),
+    status: text('status'),
+    seq: integer('seq').notNull(),
+    detail: jsonb('detail'),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => [
+    index('idx_scrape_step_events_job_id').on(table.jobId),
+    index('idx_scrape_step_events_scrape_run').on(table.scrapeRunId),
+    index('idx_scrape_step_events_created').on(table.createdAt),
+  ],
+)
 
 export const scrapeCheckpoints = pgTable('scrape_checkpoints', {
   id: uuid('id').primaryKey().defaultRandom(),

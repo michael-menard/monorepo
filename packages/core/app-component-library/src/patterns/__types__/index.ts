@@ -55,9 +55,30 @@ export const ActivityListTimelinePropsSchema = z.object({
   variant: z.literal('timeline'),
 })
 
+export const StepperItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  status: z.enum(['pending', 'running', 'completed', 'skipped', 'failed']),
+  detail: z.string().optional(),
+  error: z.string().optional(),
+  elapsed: z.string().optional(),
+})
+
+export type StepperItem = z.infer<typeof StepperItemSchema>
+
+export const ActivityListStepperPropsSchema = z.object({
+  steps: z.array(StepperItemSchema),
+  variant: z.literal('stepper'),
+  compact: z.boolean().optional(),
+})
+
 export type ActivityListImageProps = z.infer<typeof ActivityListImagePropsSchema>
 export type ActivityListTimelineProps = z.infer<typeof ActivityListTimelinePropsSchema>
-export type ActivityListProps = ActivityListImageProps | ActivityListTimelineProps
+export type ActivityListStepperProps = z.infer<typeof ActivityListStepperPropsSchema>
+export type ActivityListProps =
+  | ActivityListImageProps
+  | ActivityListTimelineProps
+  | ActivityListStepperProps
 
 // =============================================================================
 // GaugeChart

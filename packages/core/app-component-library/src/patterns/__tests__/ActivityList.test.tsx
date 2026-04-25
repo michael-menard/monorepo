@@ -9,6 +9,15 @@ vi.mock('lucide-react', () => ({
     <svg data-testid="arrow-icon" {...props} />
   ),
   RefreshCw: (props: Record<string, unknown>) => <svg data-testid="refresh-icon" {...props} />,
+  Check: (props: Record<string, unknown>) => <svg data-testid="check-icon" {...props} />,
+  Loader2: (props: Record<string, unknown>) => <svg data-testid="loader-icon" {...props} />,
+  SkipForward: (props: Record<string, unknown>) => (
+    <svg data-testid="skip-icon" {...props} />
+  ),
+  AlertCircle: (props: Record<string, unknown>) => (
+    <svg data-testid="alert-circle-icon" {...props} />
+  ),
+  Circle: (props: Record<string, unknown>) => <svg data-testid="circle-icon" {...props} />,
 }))
 
 const mockItems: ActivityListItem[] = [

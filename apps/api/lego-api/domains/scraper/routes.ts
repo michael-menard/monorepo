@@ -480,6 +480,41 @@ scraper.post('/jobs/:id/promote', async c => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────
+// GET /scraper/jobs/:id/steps — Step-level audit trail for a scrape job
+// ─────────────────────────────────────────────────────────────────────────
+
+scraper.get('/jobs/:id/steps', async c => {
+  const jobId = c.req.param('id')
+
+  try {
+    const { getScraperDb, scraperSchema } = await import('../../composition/scraper-db.js')
+    const { eq, or, asc } = await import('drizzle-orm')
+    const scraperDb = getScraperDb()
+
+    // scrape_run_id is UUID — only include in query if input looks like a UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId)
+    const whereClause = isUuid
+      ? or(
+          eq(scraperSchema.scrapeStepEvents.jobId, jobId),
+          eq(scraperSchema.scrapeStepEvents.scrapeRunId, jobId),
+        )
+      : eq(scraperSchema.scrapeStepEvents.jobId, jobId)
+
+    const events = await scraperDb
+      .select()
+      .from(scraperSchema.scrapeStepEvents)
+      .where(whereClause)
+      .orderBy(asc(scraperSchema.scrapeStepEvents.seq))
+
+    return c.json({ steps: events })
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.error('Failed to fetch step events', error, { jobId })
+    return c.json({ error: 'INTERNAL_ERROR', message: msg }, 500)
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────
 // GET /scraper/queues — Queue health + circuit breaker status
 // ─────────────────────────────────────────────────────────────────────────
 

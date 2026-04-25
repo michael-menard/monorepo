@@ -59,6 +59,14 @@ function parseArgs(argv: string[]) {
         i++
         break
       }
+      case '--job-id': {
+        const value = args[i + 1]
+        if (value && !value.startsWith('--')) {
+          options.jobId = value
+          i++
+        }
+        break
+      }
       case '--limit':
         options.limit = parseInt(args[++i], 10)
         break

@@ -26,12 +26,14 @@ export interface MocSingleResult {
  */
 export async function processRebrickableMocSingle(
   job: RebrickableMocSingleJob,
+  jobId?: string,
 ): Promise<MocSingleResult> {
   const { mocNumber, force, retryMissing } = job
 
-  const args = ['--single', mocNumber]
+  const args = ['--single', mocNumber, '--headed']
   if (force) args.push('--force')
   if (retryMissing) args.push('--retry-missing')
+  if (jobId) args.push('--job-id', jobId)
 
   logger.info(`[rebrickable-moc-single] Scraping MOC-${mocNumber}`, { args })
 

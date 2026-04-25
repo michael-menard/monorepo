@@ -8,6 +8,21 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import { createServerlessBaseQuery } from './base-query'
 import type { ScrapeJob, QueueHealth, ScraperType } from '../schemas/scraper'
 
+export interface StepEvent {
+  id: string
+  jobId: string | null
+  scrapeRunId: string | null
+  mocNumber: string | null
+  scraperType: string
+  eventType: string
+  stepId: string | null
+  status: string | null
+  seq: number
+  detail: Record<string, unknown> | null
+  error: string | null
+  createdAt: string
+}
+
 interface JobListResponse {
   jobs: ScrapeJob[]
 }
@@ -120,6 +135,13 @@ export const scraperApi = createApi({
     }),
 
     /**
+     * GET /scraper/jobs/:id/steps — Step-level audit trail for a scrape job
+     */
+    getJobSteps: builder.query<{ steps: StepEvent[] }, string>({
+      query: id => ({ url: `/scraper/jobs/${id}/steps` }),
+    }),
+
+    /**
      * GET /scraper/queues — Queue health + circuit breaker status
      */
     getQueueHealth: builder.query<QueueHealthResponse, void>({
@@ -181,6 +203,7 @@ export const {
   useClearJobsByStatusMutation,
   useRetryScrapeJobMutation,
   usePromoteScrapeJobMutation,
+  useGetJobStepsQuery,
   useGetQueueHealthQuery,
   usePauseQueueMutation,
   useResumeQueueMutation,

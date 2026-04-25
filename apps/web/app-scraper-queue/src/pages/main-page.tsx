@@ -97,7 +97,7 @@ function TabLabel({ name, label }: { name: string; label: string }) {
 
 export function MainPage() {
   const [activeTab, setActiveTab] = useState('bricklink-minifig')
-  const { events, isConnected } = useScraperEvents()
+  const { events, isConnected, stepsByJobId } = useScraperEvents()
   const dispatch = useDispatch()
   const { data: healthData } = useGetQueueHealthQuery(undefined, { pollingInterval: 10000 })
   const [pauseAll, { isLoading: isPausingAll }] = usePauseAllQueuesMutation()
@@ -210,7 +210,7 @@ export function MainPage() {
 
       {/* Unified job board — all scrapers, fills remaining height */}
       <div className="flex-1 min-h-0">
-        <JobBoard />
+        <JobBoard stepsByJobId={stepsByJobId} />
       </div>
     </div>
   )

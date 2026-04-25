@@ -43,6 +43,7 @@ import {
   X,
 } from 'lucide-react'
 import { AlertTriangle, Clock, Hash, Info } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import {
   AppDialog,
   AppDialogContent,
@@ -53,10 +54,13 @@ import {
   Badge,
   Button,
   cn,
+  ActivityList,
 } from '@repo/app-component-library'
+import type { JobStepData } from '../../hooks/useScraperEvents'
 import {
   useGetScrapeJobsQuery,
   useGetQueueHealthQuery,
+  useGetJobStepsQuery,
   useCancelScrapeJobMutation,
   useClearJobsByStatusMutation,
   useRetryScrapeJobMutation,
@@ -171,6 +175,8 @@ function JobCard({
   onToggleSelect,
   onViewDetail,
   isRetrying,
+  stepData,
+  defaultExpanded,
 }: {
   job: ScrapeJob
   isDraggable?: boolean
@@ -183,6 +189,8 @@ function JobCard({
   onToggleSelect?: (id: string) => void
   onViewDetail?: (job: ScrapeJob) => void
   isRetrying?: boolean
+  stepData?: JobStepData
+  defaultExpanded?: boolean
 }) {
   const isActive = job.status === 'active'
   const elapsed = useElapsedTime(job.processedAt, isActive)
@@ -191,6 +199,67 @@ function JobCard({
   const showError = job.failedReason && job.status === 'failed' && !isRetrying
   // Show warning icon when card has a previous error but is not in the failed lane
   const showPreviouslyFailed = job.failedReason && !showError
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false)
+
+  // Fetch step history from API if no WebSocket data available
+  const shouldFetchSteps =
+    !stepData?.plan && (isActive || job.status === 'failed' || job.status === 'completed')
+  const { data: apiSteps } = useGetJobStepsQuery(job.id, {
+    skip: !shouldFetchSteps,
+    pollingInterval: isActive ? 5000 : undefined,
+  })
+
+  // Build effective step data: prefer WebSocket (real-time), fall back to API (persistent)
+  const effectiveStepData = useMemo(() => {
+    if (stepData?.plan) return stepData
+
+    if (!apiSteps?.steps?.length) return undefined
+
+    const planEvent = apiSteps.steps.find(e => e.eventType === 'step_plan')
+    if (!planEvent?.detail) return undefined
+
+    const planSteps = (planEvent.detail as { steps?: Array<{ id: string; label: string }> }).steps
+    if (!planSteps?.length) return undefined
+
+    const stepMap = new Map<
+      string,
+      {
+        status: string
+        detail?: Record<string, unknown>
+        error?: string
+        startedAt?: number
+        completedAt?: number
+      }
+    >()
+    for (const s of planSteps) {
+      stepMap.set(s.id, { status: 'pending' })
+    }
+
+    // Apply progress events in sequence order
+    for (const evt of apiSteps.steps) {
+      if (evt.eventType === 'step_progress' && evt.stepId && evt.status) {
+        const existing = stepMap.get(evt.stepId) ?? { status: 'pending' }
+        stepMap.set(evt.stepId, {
+          ...existing,
+          status: evt.status,
+          ...(evt.detail ? { detail: evt.detail } : {}),
+          ...(evt.error ? { error: evt.error } : {}),
+          ...(evt.status === 'running' ? { startedAt: new Date(evt.createdAt).getTime() } : {}),
+          ...(evt.status === 'completed' || evt.status === 'failed' || evt.status === 'skipped'
+            ? { completedAt: new Date(evt.createdAt).getTime() }
+            : {}),
+        })
+      }
+    }
+
+    return {
+      plan: { steps: planSteps },
+      steps: stepMap as Map<string, any>,
+      lastUpdated: Date.now(),
+    }
+  }, [stepData, apiSteps])
+
+  const hasSteps = effectiveStepData?.plan && effectiveStepData.plan.steps.length > 0
 
   const card = (
     <div
@@ -287,6 +356,51 @@ function JobCard({
           </Button>
         )}
       </div>
+
+      {hasSteps && (
+        <>
+          <button
+            type="button"
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              setIsExpanded(prev => !prev)
+            }}
+          >
+            <ChevronDown
+              className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-180')}
+            />
+            {isExpanded ? 'Hide' : 'Show'} steps
+          </button>
+          {isExpanded && (
+            <div className="pt-1 border-t border-border/50">
+              <ActivityList
+                variant="stepper"
+                steps={effectiveStepData!.plan!.steps.map(s => {
+                  const state = effectiveStepData!.steps.get(s.id)
+                  const detailStr = state?.detail
+                    ? Object.entries(state.detail)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ')
+                    : undefined
+                  const elapsedStr =
+                    state?.startedAt && state?.completedAt
+                      ? formatElapsed(state.completedAt - state.startedAt)
+                      : undefined
+                  return {
+                    id: s.id,
+                    label: s.label,
+                    status: state?.status ?? 'pending',
+                    detail: detailStr,
+                    error: state?.error,
+                    elapsed: elapsedStr,
+                  }
+                })}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 
@@ -456,6 +570,8 @@ function SortableJobCard({
   onToggleSelect,
   onViewDetail,
   isRetrying,
+  stepData,
+  defaultExpanded,
 }: {
   job: ScrapeJob
   sortableId: string
@@ -466,6 +582,8 @@ function SortableJobCard({
   onToggleSelect?: (id: string) => void
   onViewDetail?: (job: ScrapeJob) => void
   isRetrying?: boolean
+  stepData?: JobStepData
+  defaultExpanded?: boolean
 }) {
   const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -493,6 +611,8 @@ function SortableJobCard({
         onToggleSelect={onToggleSelect}
         onViewDetail={onViewDetail}
         isRetrying={isRetrying}
+        stepData={stepData}
+        defaultExpanded={defaultExpanded}
       />
     </div>
   )
@@ -555,6 +675,7 @@ function SwimLane({
   onViewDetail,
   retryingJobIds,
   sortableIdToJob,
+  stepsByJobId,
 }: {
   title: string
   status: string
@@ -571,6 +692,7 @@ function SwimLane({
   onViewDetail?: (job: ScrapeJob) => void
   retryingJobIds?: Set<string>
   sortableIdToJob?: Map<string, ScrapeJob>
+  stepsByJobId?: Map<string, JobStepData>
 }) {
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -714,6 +836,7 @@ function SwimLane({
                       onToggleSelect={onToggleSelect}
                       onViewDetail={onViewDetail}
                       isRetrying={retryingJobIds?.has(job.id)}
+                      stepData={stepsByJobId?.get(job.id)}
                     />
                   )
                 })}
@@ -733,6 +856,8 @@ function SwimLane({
                 onToggleSelect={onToggleSelect}
                 onViewDetail={onViewDetail}
                 isRetrying={retryingJobIds?.has(job.id)}
+                stepData={stepsByJobId?.get(job.id)}
+                defaultExpanded={status === 'active'}
               />
             ))}
           </DroppableLane>
@@ -839,7 +964,10 @@ function BulkActionBar({
 // Job Board
 // ─────────────────────────────────────────────────────────────────────────
 
-export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
+export function JobBoard({
+  scraperType,
+  stepsByJobId,
+}: { scraperType?: string; stepsByJobId?: Map<string, JobStepData> } = {}) {
   const queryParams = scraperType ? { type: scraperType as any } : undefined
   const { data } = useGetScrapeJobsQuery(queryParams, { pollingInterval: 3000 })
   const { data: healthData } = useGetQueueHealthQuery(undefined, { pollingInterval: 10000 })
@@ -1301,6 +1429,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onViewDetail={handleViewDetail}
+            stepsByJobId={stepsByJobId}
           />
           <SwimLane
             title="Failed"
@@ -1314,6 +1443,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             onSelectAll={handleSelectAll}
             onViewDetail={handleViewDetail}
             sortableIdToJob={sortableIdToJob}
+            stepsByJobId={stepsByJobId}
           />
           <SwimLane
             title="Completed"
@@ -1324,6 +1454,7 @@ export function JobBoard({ scraperType }: { scraperType?: string } = {}) {
             onToggleSelect={toggleSelect}
             onSelectAll={handleSelectAll}
             onViewDetail={handleViewDetail}
+            stepsByJobId={stepsByJobId}
           />
         </div>
         <DragOverlay>

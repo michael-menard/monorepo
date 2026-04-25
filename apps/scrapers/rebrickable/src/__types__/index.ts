@@ -12,6 +12,7 @@ export const CliOptionsSchema = z.object({
   likedMocs: z.boolean().default(false),
   listOnly: z.boolean().default(false),
   single: z.string().optional(),
+  jobId: z.string().optional(),
   limit: z.number().int().positive().optional(),
   ignoreRobots: z.boolean().default(false),
 })

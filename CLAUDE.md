@@ -28,6 +28,17 @@ This is a TypeScript monorepo (pnpm + Turborepo) for a personal LEGO building ap
 - **Zero trust** — validate at every boundary, Zod on all inputs
 - See also: [Backend & data architecture](./docs/tech-stack/backend.md)
 
+### Database Migrations (REQUIRED)
+
+All database schema changes **must** go through Drizzle Kit. Never write raw SQL migration files by hand or run DDL statements directly.
+
+1. **Update the Drizzle schema** (the `.ts` schema file is the source of truth)
+2. **Generate the migration** with `pnpm drizzle-kit generate` (from the relevant app directory)
+3. **Apply the migration** with `pnpm drizzle-kit migrate` (or `push` for dev)
+4. **Verify** the generated SQL before applying
+
+If Drizzle Kit cannot be run (e.g., no DB credentials available), **ask the user** before writing a migration file manually. Never silently hand-write migration SQL.
+
 ### Testing
 
 - **Vitest** for unit and integration tests
@@ -251,3 +262,4 @@ Claude agents live in `.claude/agents/*.agent.md`.
 7. Prefix intentionally unused variables with `_` (e.g., `_unused`) — the linter ignores `_`-prefixed names
 8. Don't hardcode ports — use `infra/ports.json`
 9. Don't mock the code under test — mock external dependencies only
+10. Don't write migration SQL by hand — use Drizzle Kit to generate migrations from schema changes
