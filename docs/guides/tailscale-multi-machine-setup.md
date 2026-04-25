@@ -18,6 +18,8 @@ coffee shop, cellular — as long as they're online and Tailscale is running.
 | Monorepo postgres | 5432 |
 | Flagsmith         | 8000 |
 | SonarQube         | 9001 |
+| Grafana           | 3003 |
+| Prometheus        | 9090 |
 
 All are managed by Docker Compose and only need to run on the primary Mac.
 Secondary machines connect remotely via Tailscale.
@@ -182,6 +184,8 @@ This starts Docker infrastructure, then four dev servers:
 | Lego API      | http://mac-studio.tail9eb57b.ts.net:9100 |
 | Roadmap (UI)  | http://mac-studio.tail9eb57b.ts.net:8027 |
 | Roadmap API   | http://mac-studio.tail9eb57b.ts.net:9103 |
+| Grafana       | http://mac-studio.tail9eb57b.ts.net:3003 |
+| Prometheus    | http://mac-studio.tail9eb57b.ts.net:9090 |
 
 To stop dev servers (Docker keeps running):
 
