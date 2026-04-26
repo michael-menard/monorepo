@@ -175,6 +175,7 @@ export const mocInstructions = pgTable(
     // ─────────────────────────────────────────────────────────────────────────
     // Platform & Source Tracking
     // ─────────────────────────────────────────────────────────────────────────
+    source: text('source').default('rebrickable'), // Canonical scrape source: 'rebrickable', 'bricklink', etc.
     sourcePlatform: jsonb('source_platform').$type<{
       platform: 'rebrickable' | 'bricklink' | 'brickowl' | 'mecabricks' | 'studio' | 'other'
       externalId?: string | null

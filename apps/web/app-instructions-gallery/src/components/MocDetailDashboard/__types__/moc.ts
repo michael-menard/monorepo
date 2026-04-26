@@ -38,6 +38,8 @@ export type MocAuthor = z.infer<typeof MocAuthorSchema>
 
 export const MocSchema = z.object({
   id: z.string(),
+  mocNumber: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
   title: z.string(),
   description: z.string().optional(),
   tags: z.array(z.string()),

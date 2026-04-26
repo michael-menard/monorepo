@@ -57,6 +57,17 @@ const TABS = [
     ),
   },
   {
+    key: 'bricklink-moc-single',
+    label: 'BL MOC',
+    form: (
+      <UrlJobForm
+        scraperType="bricklink-moc-single"
+        placeholder="BrickLink Studio URL (e.g., https://www.bricklink.com/v3/studio/design.page?idModel=657324)"
+        showWishlist={false}
+      />
+    ),
+  },
+  {
     key: 'lego-set',
     label: 'LEGO Set',
     form: <UrlJobForm scraperType="lego-set" placeholder="LEGO.com product URL" />,

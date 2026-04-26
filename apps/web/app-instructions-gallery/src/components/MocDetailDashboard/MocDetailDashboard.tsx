@@ -30,6 +30,7 @@ import { BuildStatusBadge } from './BuildStatusBadge'
 import { CompletionModal } from './CompletionModal'
 import { BuildReviewModal } from './BuildReviewModal'
 import { ReviewCard } from './ReviewCard'
+import { ScrapeButton } from './ScrapeButton'
 
 function formatDate(isoDate: string): string {
   try {
@@ -207,6 +208,9 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
               buildStatus={moc.buildStatus}
               onStatusChange={handleStatusChange}
             />
+            {moc.mocNumber ? (
+              <ScrapeButton mocNumber={moc.mocNumber} source={moc.source ?? 'rebrickable'} />
+            ) : null}
           </div>
           <StatsCard
             partsCount={moc.partsCount}

@@ -11,6 +11,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import { TooltipProvider } from '@repo/app-component-library'
 
 import { MainPage } from '../main-page'
+import { GalleryStateProvider } from '../../context/GalleryStateContext'
 import type { MocListResponse, MocInstructions } from '@repo/api-client/schemas/instructions'
 
 // -----------------------------------------------------------------------------
@@ -146,6 +147,8 @@ vi.mock('@repo/api-client/rtk/instructions-api', () => {
 
   return {
     useGetInstructionsQuery: useGetInstructionsQueryMock,
+    useTriggerScraperMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+    useToggleInstructionFavoriteMutation: vi.fn().mockReturnValue([vi.fn()]),
     instructionsApi: {
       reducerPath: 'instructionsApi',
       reducer: (state = {}) => state,
@@ -168,9 +171,11 @@ const createTestStore = () =>
 const renderWithProviders = () => {
   return render(
     <Provider store={createTestStore()}>
-      <TooltipProvider>
-        <MainPage />
-      </TooltipProvider>
+      <GalleryStateProvider>
+        <TooltipProvider>
+          <MainPage />
+        </TooltipProvider>
+      </GalleryStateProvider>
     </Provider>,
   )
 }

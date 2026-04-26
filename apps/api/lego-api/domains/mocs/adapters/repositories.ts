@@ -109,6 +109,8 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         ...mapRowToMoc(result),
         files,
         totalPieceCount: result.totalPieceCount,
+        mocId: result.mocId ?? null,
+        source: result.source ?? 'rebrickable',
         author: result.author ?? null,
         designer: (result.designer as MocWithFiles['designer']) ?? null,
         dimensions: result.dimensions ?? null,

@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { instructionsApi } from '@repo/api-client'
+import { scraperApi } from '@repo/api-client/rtk/scraper-api'
 import { MocSchema, type Moc } from '../__types__/moc'
 import { MocDetailDashboard } from '../MocDetailDashboard'
 
@@ -11,9 +12,12 @@ function createTestStore() {
   return configureStore({
     reducer: {
       [instructionsApi.reducerPath]: instructionsApi.reducer,
+      [scraperApi.reducerPath]: scraperApi.reducer,
     },
     middleware: getDefaultMiddleware =>
-      getDefaultMiddleware().concat(instructionsApi.middleware),
+      getDefaultMiddleware()
+        .concat(instructionsApi.middleware)
+        .concat(scraperApi.middleware),
   })
 }
 

@@ -8,6 +8,7 @@ export const ScraperTypeSchema = z.enum([
   'bricklink-minifig',
   'bricklink-catalog',
   'bricklink-prices',
+  'bricklink-moc-single',
   'lego-set',
   'rebrickable-set',
   'rebrickable-mocs',
@@ -21,6 +22,11 @@ export type ScraperType = z.infer<typeof ScraperTypeSchema>
  */
 export function detectScraperType(input: string): ScraperType | null {
   const lower = input.toLowerCase()
+
+  // BrickLink Studio gallery / design page
+  if (lower.includes('bricklink.com') && lower.includes('studio/design.page')) {
+    return 'bricklink-moc-single'
+  }
 
   // BrickLink catalog list
   if (lower.includes('bricklink.com') && lower.includes('cataloglist')) {

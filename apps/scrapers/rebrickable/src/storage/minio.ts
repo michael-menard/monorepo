@@ -67,6 +67,25 @@ export async function uploadImage(
   return { key, url }
 }
 
+export async function uploadPartsExport(
+  filePath: string,
+  mocNumber: string,
+  fileName: string,
+  bucketName: string,
+): Promise<{ key: string; url: string }> {
+  const buffer = await readFile(filePath)
+  const ext = extname(fileName).toLowerCase()
+  const contentType =
+    ext === '.xml' ? 'application/xml' : ext === '.csv' ? 'text/csv' : 'application/octet-stream'
+  const key = `mocs/MOC-${mocNumber}/parts/${fileName}`
+
+  const url = await uploadToS3({ key, body: buffer, contentType, bucket: bucketName })
+
+  logger.info(`[minio] Uploaded parts export ${fileName} → ${key}`)
+
+  return { key, url }
+}
+
 export async function listImages(mocNumber: string, bucketName: string): Promise<string[]> {
   return listObjectsFromS3({ bucket: bucketName, prefix: `mocs/MOC-${mocNumber}/images/` })
 }

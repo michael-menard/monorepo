@@ -23,13 +23,11 @@ import {
 import { logger } from '@repo/logger'
 import { Button } from '@repo/app-component-library'
 import {
-  useGetInstructionsQuery,
   useTriggerScraperMutation,
   useToggleInstructionFavoriteMutation,
 } from '@repo/api-client/rtk/instructions-api'
-// Want-to-build toggle uses direct fetch to avoid requiring procurement API in global store
+import { useGalleryState } from '../context/GalleryStateContext'
 import { InstructionCard } from '../components/InstructionCard'
-import type { Instruction } from '../__types__'
 import {
   InstructionTableItemSchema,
   type InstructionTableItem,
@@ -50,60 +48,25 @@ export type MainPageProps = z.infer<typeof MainPagePropsSchema>
  *
  * Displays the Instructions Gallery with header and grid of InstructionCards.
  * Uses GalleryGrid for layout and GalleryEmptyState when no instructions exist.
+ * List state lives in GalleryStateContext so it survives route transitions.
  */
-const LIMIT = 100
-
-function mapApiItem(api: any): Instruction {
-  return {
-    id: api.id,
-    name: api.title,
-    description: api.description ?? undefined,
-    thumbnail: api.thumbnailUrl ?? '',
-    images: [],
-    pieceCount: api.partsCount ?? 0,
-    theme: api.theme ?? '',
-    tags: api.tags ?? [],
-    pdfUrl: undefined,
-    createdAt: typeof api.createdAt === 'string' ? api.createdAt : String(api.createdAt),
-    updatedAt: api.updatedAt
-      ? typeof api.updatedAt === 'string'
-        ? api.updatedAt
-        : String(api.updatedAt)
-      : undefined,
-    isFavorite: api.isFeatured,
-    wantToBuild: api.wantToBuild ?? false,
-  }
-}
-
 export function MainPage({ className }: MainPageProps) {
   const navigate = useNavigate()
-  const [instructions, setInstructions] = useState<Instruction[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const accumulatedRef = useRef<Map<string, Instruction>>(new Map())
-
-  const { data, isLoading, isError, error, refetch } = useGetInstructionsQuery({
-    page: currentPage,
-    limit: LIMIT,
-  })
-
-  // Accumulate pages into a deduplicated map, then set state
-  useEffect(() => {
-    if (!data) return
-    setTotalPages(data.pagination.totalPages)
-    data.items.forEach(api => {
-      accumulatedRef.current.set(api.id, mapApiItem(api))
-    })
-    setInstructions(Array.from(accumulatedRef.current.values()))
-  }, [data])
-
-  const hasMore = currentPage < totalPages
-  const isLoadingMore = isLoading && currentPage > 1
-
-  const handleLoadMore = useCallback(() => {
-    if (hasMore && !isLoading) setCurrentPage(p => p + 1)
-  }, [hasMore, isLoading])
+  const {
+    instructions,
+    setInstructions,
+    accumulatedRef,
+    searchTerm,
+    setSearchTerm,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    isError,
+    error,
+    refetch,
+    handleLoadMore,
+    scrollY,
+  } = useGalleryState()
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -120,6 +83,20 @@ export function MainPage({ className }: MainPageProps) {
     if (sentinelRef.current) observerRef.current.observe(sentinelRef.current)
     return () => observerRef.current?.disconnect()
   }, [handleLoadMore])
+
+  // Save scroll position on unmount so we can restore it on return
+  useEffect(() => {
+    return () => {
+      scrollY.current = window.scrollY
+    }
+  }, [scrollY])
+
+  // Restore scroll position when returning from a detail page
+  useEffect(() => {
+    if (scrollY.current > 0 && instructions.length > 0) {
+      window.scrollTo(0, scrollY.current)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial view mode from URL (?view=grid|datatable)
   const initialUrlMode = useMemo(() => {

@@ -1,0 +1,28 @@
+{
+  "name": "@repo/scraper-bricklink-mocs",
+  "version": "1.0.0",
+  "description": "Scrape BrickLink Studio MOC detail pages — metadata, images, and parts list",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "scrape": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "@repo/s3-client": "workspace:*",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.0",
+    "pg": "^8.12.0",
+    "playwright": "^1.54.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.8.3"
+  }
+}

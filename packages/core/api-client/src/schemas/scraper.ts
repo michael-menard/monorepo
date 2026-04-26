@@ -4,6 +4,7 @@ export const ScraperTypeSchema = z.enum([
   'bricklink-minifig',
   'bricklink-catalog',
   'bricklink-prices',
+  'bricklink-moc-single',
   'lego-set',
   'rebrickable-set',
   'rebrickable-mocs',

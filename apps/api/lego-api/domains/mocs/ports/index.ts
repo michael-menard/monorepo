@@ -67,6 +67,8 @@ export interface MocFile {
 export interface MocWithFiles extends Moc {
   files: MocFile[]
   totalPieceCount: number | null
+  mocId: string | null
+  source: string | null
   author: string | null
   designer: { username?: string; profileUrl?: string | null } | null
   dimensions: unknown | null

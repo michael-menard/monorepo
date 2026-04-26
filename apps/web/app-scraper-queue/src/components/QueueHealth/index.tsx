@@ -6,6 +6,7 @@ const TYPE_LABELS: Record<string, string> = {
   'bricklink-minifig': 'BL Minifig',
   'bricklink-catalog': 'BL Catalog',
   'bricklink-prices': 'BL Prices',
+  'bricklink-moc-single': 'BL MOC',
   'lego-set': 'LEGO Set',
   'rebrickable-set': 'RB Set',
   'rebrickable-mocs': 'RB MOCs',

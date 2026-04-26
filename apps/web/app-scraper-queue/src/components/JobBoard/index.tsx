@@ -41,6 +41,8 @@ import {
   CheckSquare,
   Square,
   X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 import { AlertTriangle, Clock, Hash, Info } from 'lucide-react'
 import { ChevronDown } from 'lucide-react'
@@ -98,12 +100,7 @@ function getJobLabel(job: ScrapeJob): string {
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60000) return 'just now'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return d.toLocaleDateString()
+  return d.toLocaleString()
 }
 
 function formatElapsed(ms: number): string {
@@ -300,7 +297,9 @@ function JobCard({
         {showPreviouslyFailed && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
         <span className="font-medium truncate flex-1">{getJobLabel(job)}</span>
         <span className="text-muted-foreground shrink-0">
-          {isActive ? formatElapsed(elapsed) : formatTime(job.createdAt)}
+          {isActive
+            ? formatElapsed(elapsed)
+            : formatTime(job.finishedAt ?? job.processedAt ?? job.createdAt)}
         </span>
       </div>
 
@@ -635,6 +634,8 @@ function DroppableLane({ id, children }: { id: string; children: React.ReactNode
 // Swim Lane
 // ─────────────────────────────────────────────────────────────────────────
 
+type SortDirection = 'desc' | 'asc'
+
 const LANE_COLORS: Record<string, string> = {
   waiting: 'border-t-yellow-500',
   active: 'border-t-blue-500',
@@ -697,21 +698,41 @@ function SwimLane({
   const [clearJobs, { isLoading: isClearing }] = useClearJobsByStatusMutation()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [filter, setFilter] = useState('')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const filteredJobs = useMemo(
-    () => (filter ? jobs.filter(j => jobMatchesFilter(j, filter)) : jobs),
-    [jobs, filter],
-  )
+  const filteredJobs = useMemo(() => {
+    const matched = filter ? jobs.filter(j => jobMatchesFilter(j, filter)) : [...jobs]
+    const dir = sortDirection === 'desc' ? -1 : 1
+    matched.sort((a, b) => {
+      const aTime = new Date(a.finishedAt ?? a.processedAt ?? a.createdAt).getTime()
+      const bTime = new Date(b.finishedAt ?? b.processedAt ?? b.createdAt).getTime()
+      return (aTime - bTime) * dir
+    })
+    return matched
+  }, [jobs, filter, sortDirection])
 
   const filteredSortableIds = useMemo(() => {
-    if (!sortableIds || !filter) return sortableIds
-    const matchingJobIds = new Set(filteredJobs.map(j => j.id))
-    return sortableIds.filter(sid => {
-      const job = sortableIdToJob?.get(sid)
-      return job && matchingJobIds.has(job.id)
+    if (!sortableIds) return sortableIds
+    let ids = sortableIds
+    if (filter) {
+      const matchingJobIds = new Set(filteredJobs.map(j => j.id))
+      ids = ids.filter(sid => {
+        const job = sortableIdToJob?.get(sid)
+        return job && matchingJobIds.has(job.id)
+      })
+    }
+    const dir = sortDirection === 'desc' ? -1 : 1
+    ids = [...ids].sort((aSid, bSid) => {
+      const a = sortableIdToJob?.get(aSid)
+      const b = sortableIdToJob?.get(bSid)
+      if (!a || !b) return 0
+      const aTime = new Date(a.finishedAt ?? a.processedAt ?? a.createdAt).getTime()
+      const bTime = new Date(b.finishedAt ?? b.processedAt ?? b.createdAt).getTime()
+      return (aTime - bTime) * dir
     })
-  }, [sortableIds, filter, filteredJobs, sortableIdToJob])
+    return ids
+  }, [sortableIds, filter, filteredJobs, sortableIdToJob, sortDirection])
 
   const itemCount = filteredSortableIds?.length ?? filteredJobs.length
   const visibleJobs = filteredSortableIds ? filteredJobs : filteredJobs.slice(0, visibleCount)
@@ -786,6 +807,19 @@ function SwimLane({
             )}
           </span>
           <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 px-1 text-muted-foreground hover:text-foreground"
+              title={sortDirection === 'desc' ? 'Newest first' : 'Oldest first'}
+              onClick={() => setSortDirection(d => (d === 'desc' ? 'asc' : 'desc'))}
+            >
+              {sortDirection === 'desc' ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )}
+            </Button>
             {jobs.length > 0 && (
               <Button
                 variant="ghost"

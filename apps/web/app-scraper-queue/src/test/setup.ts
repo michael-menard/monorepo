@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, beforeAll, afterAll } from 'vitest'
+import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { server } from './mocks/server'
 
 afterEach(() => {
@@ -53,7 +53,5 @@ vi.mock('@repo/logger', () => ({
     debug: vi.fn(),
   })),
 }))
-
-globalThis.vi = vi
 
 vi.stubEnv('VITE_SERVERLESS_API_BASE_URL', 'http://localhost:3001')

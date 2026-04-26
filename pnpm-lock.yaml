@@ -509,6 +509,52 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
+  apps/scrapers/bricklink-mocs:
+    dependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../../packages/backend/db
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../../packages/core/logger
+      '@repo/s3-client':
+        specifier: workspace:*
+        version: link:../../../packages/backend/s3-client
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      drizzle-orm:
+        specifier: ^0.44.0
+        version: 0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.2.0)(pg@8.18.0)
+      pg:
+        specifier: ^8.12.0
+        version: 8.18.0
+      playwright:
+        specifier: ^1.54.1
+        version: 1.58.2
+      playwright-extra:
+        specifier: ^4.3.6
+        version: 4.3.6(playwright-core@1.58.2)(playwright@1.58.2)
+      puppeteer-extra-plugin-stealth:
+        specifier: ^2.11.2
+        version: 2.11.2(playwright-extra@4.3.6(playwright-core@1.58.2)(playwright@1.58.2))
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.11.0
+        version: 8.16.0
+      drizzle-kit:
+        specifier: ^0.31.0
+        version: 0.31.10
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
   apps/scrapers/lego-com:
     dependencies:
       '@repo/s3-client':
@@ -25966,7 +26012,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(lightningcss@1.31.1)(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@25.3.3)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.3.3)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:

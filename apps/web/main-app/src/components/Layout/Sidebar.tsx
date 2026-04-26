@@ -16,6 +16,7 @@ import {
   Lightbulb,
   User,
   Package,
+  RefreshCw,
 } from 'lucide-react'
 import { QuickActions } from '../Navigation/QuickActions'
 import { useNavigation } from '../Navigation/NavigationProvider'
@@ -39,6 +40,7 @@ const iconMap = {
   Lightbulb,
   User,
   Package,
+  RefreshCw,
 }
 
 // LEGO-inspired navigation items with legacy route support

@@ -56,6 +56,9 @@ const ProcurementPage = lazy(() =>
 const UserProfilePage = lazy(() =>
   import('@repo/user-settings').then(m => ({ default: m.default })),
 )
+const ScraperQueueModule = lazy(() =>
+  import('@repo/app-scraper-queue').then(m => ({ default: m.AppScraperQueueModule })),
+)
 const AdminModule = lazy(() =>
   import('./admin/AdminModule').then(m => ({ default: m.AdminModule })),
 )
@@ -88,7 +91,7 @@ export function AppRoutes() {
         path="/sets/*"
         element={
           <SuspenseWrapper>
-          <SetsModule />
+            <SetsModule />
           </SuspenseWrapper>
         }
       />
@@ -96,7 +99,7 @@ export function AppRoutes() {
         path="/wishlist/*"
         element={
           <SuspenseWrapper>
-          <WishlistModule />
+            <WishlistModule />
           </SuspenseWrapper>
         }
       />
@@ -104,7 +107,7 @@ export function AppRoutes() {
         path="/minifigs/*"
         element={
           <SuspenseWrapper>
-          <MinifigsModule />
+            <MinifigsModule />
           </SuspenseWrapper>
         }
       />
@@ -112,7 +115,7 @@ export function AppRoutes() {
         path="/instructions/*"
         element={
           <SuspenseWrapper>
-          <InstructionsModule />
+            <InstructionsModule />
           </SuspenseWrapper>
         }
       />
@@ -120,7 +123,7 @@ export function AppRoutes() {
         path="/dashboard"
         element={
           <SuspenseWrapper>
-          <DashboardModule />
+            <DashboardModule />
           </SuspenseWrapper>
         }
       />
@@ -128,7 +131,7 @@ export function AppRoutes() {
         path="/settings/*"
         element={
           <SuspenseWrapper>
-          <SettingsModule />
+            <SettingsModule />
           </SuspenseWrapper>
         }
       />
@@ -136,7 +139,7 @@ export function AppRoutes() {
         path="/procurement"
         element={
           <SuspenseWrapper>
-          <ProcurementPage />
+            <ProcurementPage />
           </SuspenseWrapper>
         }
       />
@@ -144,7 +147,7 @@ export function AppRoutes() {
         path="/inspiration"
         element={
           <SuspenseWrapper>
-          <InspirationModule />
+            <InspirationModule />
           </SuspenseWrapper>
         }
       />
@@ -152,21 +155,30 @@ export function AppRoutes() {
         path="/profile/:id"
         element={
           <SuspenseWrapper>
-          <UserProfilePage />
+            <UserProfilePage />
+          </SuspenseWrapper>
+        }
+      />
+
+      <Route
+        path="/scraper-queue/*"
+        element={
+          <SuspenseWrapper>
+            <ScraperQueueModule />
           </SuspenseWrapper>
         }
       />
 
       {/* Admin routes */}
       <Route element={<AdminLayout />}>
-      <Route
-        path="/admin/*"
-        element={
-          <SuspenseWrapper>
-          <AdminModule />
-          </SuspenseWrapper>
-        }
-      />
+        <Route
+          path="/admin/*"
+          element={
+            <SuspenseWrapper>
+              <AdminModule />
+            </SuspenseWrapper>
+          }
+        />
       </Route>
 
       {/* Legacy redirects */}

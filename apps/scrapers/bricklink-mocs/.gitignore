@@ -1,0 +1,5 @@
+.session.json
+.rate-limit.json
+.env
+dist/
+node_modules/

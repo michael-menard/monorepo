@@ -65,10 +65,21 @@ const mockMoc: MocWithFiles = {
   slug: 'castle-moc',
   type: 'moc',
   thumbnailUrl: null,
+  partsCount: null,
   createdAt: new Date('2025-01-01T00:00:00Z'),
   updatedAt: new Date('2025-01-02T00:00:00Z'),
   files: [],
   totalPieceCount: 1500,
+  mocId: null,
+  source: 'rebrickable',
+  author: null,
+  designer: null,
+  dimensions: null,
+  publishedAt: null,
+  ratings: null,
+  notes: null,
+  buildStatus: 'instructions_added',
+  reviewSkippedAt: null,
 }
 
 // Mock upload session data

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/app-component-library'
-import { ImageIcon, AlertCircle } from 'lucide-react'
+import { ImageIcon, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DashboardCard } from './DashboardCard'
 import type { MocGalleryImage } from './__types__/moc'
 
@@ -14,6 +14,34 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
   const [imgError, setImgError] = useState(false)
 
   const currentImage = openIndex != null ? safeImages[openIndex] : null
+  const isOpen = openIndex != null
+
+  const goToPrevious = useCallback(() => {
+    if (openIndex == null || safeImages.length <= 1) return
+    setImgError(false)
+    setOpenIndex(openIndex === 0 ? safeImages.length - 1 : openIndex - 1)
+  }, [openIndex, safeImages.length])
+
+  const goToNext = useCallback(() => {
+    if (openIndex == null || safeImages.length <= 1) return
+    setImgError(false)
+    setOpenIndex(openIndex === safeImages.length - 1 ? 0 : openIndex + 1)
+  }, [openIndex, safeImages.length])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToPrevious()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToNext()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, goToPrevious, goToNext])
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -61,7 +89,7 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
         </div>
       )}
 
-      <Dialog open={openIndex != null} onOpenChange={handleOpenChange}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
           style={{
             maxWidth: '48rem',
@@ -71,13 +99,28 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Gallery image {openIndex != null ? openIndex + 1 : ''}</DialogTitle>
+            <DialogTitle>
+              Gallery image {openIndex != null ? openIndex + 1 : ''} of {safeImages.length}
+            </DialogTitle>
           </DialogHeader>
-          <div className="mt-4 flex items-center justify-center" style={{ minHeight: '200px' }}>
+          <div
+            className="relative mt-4 flex items-center justify-center"
+            style={{ minHeight: '200px' }}
+          >
+            {safeImages.length > 1 && (
+              <button
+                type="button"
+                onClick={goToPrevious}
+                className="absolute left-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-sm transition-colors hover:bg-background"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
             {currentImage && !imgError ? (
               <img
                 src={currentImage.url}
-                alt="Selected gallery image"
+                alt={`Gallery image ${openIndex != null ? openIndex + 1 : ''} of ${safeImages.length}`}
                 className="w-full object-contain rounded-lg"
                 style={{ maxHeight: '70vh' }}
                 onError={() => setImgError(true)}
@@ -97,6 +140,16 @@ export function GalleryCard({ galleryImages }: GalleryCardProps) {
                   </a>
                 )}
               </div>
+            )}
+            {safeImages.length > 1 && (
+              <button
+                type="button"
+                onClick={goToNext}
+                className="absolute right-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-sm transition-colors hover:bg-background"
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
             )}
           </div>
         </DialogContent>

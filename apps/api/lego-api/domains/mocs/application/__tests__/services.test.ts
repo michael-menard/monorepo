@@ -82,6 +82,16 @@ const mockMocWithFiles: MocWithFiles = {
   ...mockMoc,
   files: mockFiles,
   totalPieceCount: 1500,
+  mocId: null,
+  source: 'rebrickable',
+  author: null,
+  designer: null,
+  dimensions: null,
+  publishedAt: null,
+  ratings: null,
+  notes: null,
+  buildStatus: 'instructions_added',
+  reviewSkippedAt: null,
 }
 
 // Mock file data for download tests (INST-1107)
@@ -334,9 +344,8 @@ describe('MocService - INST-1101', () => {
   describe('Edge Cases', () => {
     it('handles MOC with no files', async () => {
       const mocWithNoFiles: MocWithFiles = {
-        ...mockMoc,
+        ...mockMocWithFiles,
         files: [],
-        totalPieceCount: 1500,
       }
 
       vi.mocked(mocRepo.getMocById).mockResolvedValue(mocWithNoFiles)
@@ -352,7 +361,7 @@ describe('MocService - INST-1101', () => {
 
     it('handles MOC with null optional fields', async () => {
       const mocWithNulls: MocWithFiles = {
-        ...mockMoc,
+        ...mockMocWithFiles,
         description: null,
         theme: null,
         tags: null,
@@ -377,9 +386,8 @@ describe('MocService - INST-1101', () => {
 
     it('handles MOC with only one file type', async () => {
       const mocWithOneFile: MocWithFiles = {
-        ...mockMoc,
+        ...mockMocWithFiles,
         files: [mockFiles[0]], // Only instruction file
-        totalPieceCount: 1500,
       }
 
       vi.mocked(mocRepo.getMocById).mockResolvedValue(mocWithOneFile)
@@ -680,9 +688,8 @@ describe('MocService - INST-1101', () => {
       }))
 
       const mocWithManyFiles: MocWithFiles = {
-        ...mockMoc,
+        ...mockMocWithFiles,
         files: manyFiles,
-        totalPieceCount: 1500,
       }
 
       vi.mocked(mocRepo.getMocById).mockResolvedValue(mocWithManyFiles)

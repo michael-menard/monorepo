@@ -189,6 +189,16 @@ const initialState: NavigationState = {
       analyticsId: 'nav_sets',
       shortcut: 'Cmd+S',
     },
+    {
+      id: 'scraper-queue',
+      label: 'Scrape Queue',
+      href: '/scraper-queue',
+      icon: 'RefreshCw',
+      description: 'Monitor and manage scraper jobs',
+      keywords: ['scraper', 'queue', 'jobs', 'scrape'],
+      category: 'primary',
+      analyticsId: 'nav_scraper_queue',
+    },
   ],
 
   // Secondary navigation for utility functions

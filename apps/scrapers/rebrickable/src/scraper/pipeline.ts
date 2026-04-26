@@ -32,7 +32,13 @@ import { TokenBucketRateLimiter } from '../middleware/rate-limiter.js'
 import { loadRobotsTxt, isAllowed } from '../middleware/robots.js'
 import { RetryHandler } from '../middleware/retry.js'
 import { CheckpointManager } from '../checkpoint/manager.js'
-import { initBucket, uploadInstruction, uploadImage, listImages } from '../storage/minio.js'
+import {
+  initBucket,
+  uploadInstruction,
+  uploadImage,
+  uploadPartsExport,
+  listImages,
+} from '../storage/minio.js'
 import { normalizeParts } from '../data/normalizer.js'
 import { enrichScrapeRun } from '../data/enricher.js'
 import { ProgressTracker } from '../utils/progress.js'
@@ -193,6 +199,7 @@ export async function runSingle(
   let browser: Browser | undefined
   let context: BrowserContext | undefined
   let page: Page | undefined
+  let scrapeRunId: string | undefined
 
   try {
     if (!options.dryRun) {
@@ -207,7 +214,7 @@ export async function runSingle(
         config: { mode: 'single', mocNumber, options, ...config, password: '***' },
       })
       .returning()
-    const scrapeRunId = run.id
+    scrapeRunId = run.id
     const checkpoint = new CheckpointManager(scrapeRunId)
     const steps = new StepTracker({
       jobId: options.jobId,
@@ -228,6 +235,39 @@ export async function runSingle(
         .set({ status: 'completed', completedAt: new Date(), skipped: 1, instructionsFound: 1 })
         .where(eq(scrapeRuns.id, scrapeRunId))
       return
+    }
+
+    // ── Fill-gaps assessment ──────────────────────────────────────────────
+    // Check what data already exists so we only fill gaps, never overwrite.
+    const [existingInstr] = await db
+      .select()
+      .from(instructionsTable)
+      .where(eq(instructionsTable.mocNumber, mocNumber))
+      .limit(1)
+
+    const existingImages = existingInstr ? await listImages(mocNumber, config.bucket) : []
+    const hasExistingImages = existingImages.length > 0
+
+    const hasExistingParts = existingInstr
+      ? (
+          await db
+            .select({ id: instructionPartsTable.instructionId })
+            .from(instructionPartsTable)
+            .where(eq(instructionPartsTable.instructionId, existingInstr.id))
+            .limit(1)
+        ).length > 0
+      : false
+
+    const hasExistingFiles = existingInstr?.minioKey != null && existingInstr.minioKey !== ''
+
+    if (existingInstr) {
+      logger.info(`[single] MOC-${mocNumber}: fill-gaps assessment`, undefined, {
+        hasImages: hasExistingImages,
+        hasParts: hasExistingParts,
+        hasFiles: hasExistingFiles,
+        hasTitle: !!existingInstr.title,
+        hasDescription: !!existingInstr.description,
+      })
     }
 
     // Launch browser
@@ -285,9 +325,18 @@ export async function runSingle(
     await steps.complete('scrape_detail', { title: detail.title, partsCount: detail.partsCount })
 
     await steps.start('scrape_images')
-    const images = await mocPage.scrapeImages(mocNumber)
-    await steps.complete('scrape_images', { imagesFound: images.length })
-    if (images.length > 0) {
+    const images = hasExistingImages
+      ? [] // Fill-gaps: images already exist, skip scraping
+      : await mocPage.scrapeImages(mocNumber)
+    await steps.complete('scrape_images', {
+      imagesFound: images.length,
+      skipped: hasExistingImages,
+    })
+    if (hasExistingImages) {
+      logger.info(
+        `[single] MOC-${mocNumber}: skipping images (${existingImages.length} already in MinIO)`,
+      )
+    } else if (images.length > 0) {
       logger.info(`[single] MOC-${mocNumber}: downloaded ${images.length} images`)
     }
 
@@ -309,236 +358,297 @@ export async function runSingle(
     }
 
     // Download files
-    // Detect whether this is a free or purchased MOC and use the right download flow
+    // Fill-gaps: skip file download if instruction files already exist
     await steps.start('download_files')
-    const isFree = await mocPage.hasFreeInstructions()
-    const fileList = isFree ? await mocPage.scrapeFreeFileList() : await mocPage.scrapeFileList()
     let primaryDownloadPath: string | null = null
     let totalFileSize = 0
 
-    if (fileList.length > 0) {
-      logger.info(
-        `[single] MOC-${mocNumber}: found ${fileList.length} ${isFree ? 'free' : 'purchased'} files to download`,
-      )
+    if (hasExistingFiles) {
+      logger.info(`[single] MOC-${mocNumber}: skipping file download (files already in MinIO)`)
+      await steps.complete('download_files', { skipped: true })
+    } else {
+      // Detect whether this is a free or purchased MOC and use the right download flow
+      const isFree = await mocPage.hasFreeInstructions()
+      const fileList = isFree ? await mocPage.scrapeFreeFileList() : await mocPage.scrapeFileList()
 
-      for (let fi = 0; fi < fileList.length; fi++) {
-        const file = fileList[fi]
+      if (fileList.length > 0) {
         logger.info(
-          `[single] MOC-${mocNumber}: downloading file ${fi + 1}/${fileList.length}: ${file.fileName}`,
+          `[single] MOC-${mocNumber}: found ${fileList.length} ${isFree ? 'free' : 'purchased'} files to download`,
         )
 
-        const downloadPath = await retry.execute(
-          () =>
-            isFree
-              ? mocPage.downloadFreeFile(file, mocNumber)
-              : mocPage.triggerDownload(file, mocNumber),
-          `download MOC-${mocNumber} file ${fi + 1}`,
-        )
-
-        if (downloadPath) {
-          const buffer = await readFile(downloadPath)
-          totalFileSize += buffer.length
-          const fileName = basename(downloadPath)
-          await uploadInstruction(downloadPath, mocNumber, fileName, config.bucket)
+        for (let fi = 0; fi < fileList.length; fi++) {
+          const file = fileList[fi]
           logger.info(
-            `[single] MOC-${mocNumber}: uploaded ${fileName} (${formatBytes(buffer.length)})`,
+            `[single] MOC-${mocNumber}: downloading file ${fi + 1}/${fileList.length}: ${file.fileName}`,
           )
 
-          if (!primaryDownloadPath) {
-            primaryDownloadPath = downloadPath
+          const downloadPath = await retry.execute(
+            () =>
+              isFree
+                ? mocPage.downloadFreeFile(file, mocNumber)
+                : mocPage.triggerDownload(file, mocNumber),
+            `download MOC-${mocNumber} file ${fi + 1}`,
+          )
+
+          if (downloadPath) {
+            const buffer = await readFile(downloadPath)
+            totalFileSize += buffer.length
+            const fileName = basename(downloadPath)
+            await uploadInstruction(downloadPath, mocNumber, fileName, config.bucket)
+            logger.info(
+              `[single] MOC-${mocNumber}: uploaded ${fileName} (${formatBytes(buffer.length)})`,
+            )
+
+            if (!primaryDownloadPath) {
+              primaryDownloadPath = downloadPath
+            }
           }
         }
       }
-    }
-    await steps.complete('download_files', { filesFound: fileList.length, totalFileSize })
+      await steps.complete('download_files', { filesFound: fileList.length, totalFileSize })
+    } // end else (hasExistingFiles)
 
     // Scrape parts from inventory tab — must happen while still on the MOC page
     // and AFTER file downloads (BrickLink XML export corrupts modal state)
     await steps.start('scrape_parts')
-    const partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
-    if (partsResult.parts.length > 0) {
-      logger.info(
-        `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
-      )
+    let partsResult: Awaited<ReturnType<typeof mocPage.scrapePartsFromInventory>>
+
+    if (hasExistingParts) {
+      logger.info(`[single] MOC-${mocNumber}: skipping parts scrape (parts already linked)`)
+      partsResult = { parts: [], exports: [] }
+      await steps.complete('scrape_parts', { skipped: true })
+    } else {
+      partsResult = await mocPage.scrapePartsFromInventory(mocNumber)
+      if (partsResult.parts.length > 0) {
+        logger.info(
+          `[single] MOC-${mocNumber}: scraped ${partsResult.parts.length} unique parts (${partsResult.parts.reduce((sum, p) => sum + p.quantity, 0)} total)`,
+        )
+      }
+      await steps.complete('scrape_parts', {
+        partsFound: partsResult.parts.length,
+        exports: partsResult.exports.length,
+      })
     }
-    await steps.complete('scrape_parts', {
-      partsFound: partsResult.parts.length,
-      exports: partsResult.exports.length,
-    })
+
+    // Compute file metadata (only when files were newly downloaded)
+    let contentHash: string | null = null
+    let fileName: string | null = null
+    let fileType: string | null = null
 
     if (primaryDownloadPath) {
-      // Uploads happened inline during download — mark upload_minio as done
+      // Instruction files were uploaded inline during download.
+      // Now upload parts export files (CSV, BrickLink XML) to MinIO.
       await steps.start('upload_minio')
-      await steps.complete('upload_minio', { filesUploaded: fileList.length })
+      let partsExportsUploaded = 0
+      for (const exp of partsResult.exports) {
+        if (exp.filePath) {
+          const expFileName = basename(exp.filePath)
+          await uploadPartsExport(exp.filePath, mocNumber, expFileName, config.bucket)
+          partsExportsUploaded++
+        }
+      }
+      await steps.complete('upload_minio', {
+        filesUploaded: partsExportsUploaded + 1,
+      })
 
       const buffer = await readFile(primaryDownloadPath)
-      const contentHash = computeHash(buffer)
-      const fileName = basename(primaryDownloadPath)
-      const fileType = extname(fileName).replace('.', '').toUpperCase()
+      contentHash = computeHash(buffer)
+      fileName = basename(primaryDownloadPath)
+      fileType = extname(fileName).replace('.', '').toUpperCase()
 
       await checkpoint.save(mocNumber, 'downloaded', {
         filePath: primaryDownloadPath,
         fileName,
         fileSize: totalFileSize,
         contentHash,
-        fileCount: fileList.length,
       })
       await checkpoint.save(mocNumber, 'uploaded')
+    } else {
+      await steps.skip('upload_minio')
+    }
 
-      // Merge inventory parts with any parts from scrapeDetail()
-      const allParts = partsResult.parts.length > 0 ? partsResult.parts : detail.parts
-      const normalizedParts = normalizeParts(allParts)
+    // Merge inventory parts with any parts from scrapeDetail()
+    const allParts = partsResult.parts.length > 0 ? partsResult.parts : detail.parts
+    const normalizedParts = normalizeParts(allParts)
 
-      await steps.start('db_upsert')
+    // ── DB Upsert (always runs — fills gaps in scalar fields) ────────
+    await steps.start('db_upsert')
 
-      const instructionResult = await db
-        .insert(instructionsTable)
-        .values({
-          mocNumber,
-          title: detail.title,
-          author: detail.author,
-          rebrickableUrl: mocUrl,
-          downloadUrl: mocUrl,
-          partsCount:
-            normalizedParts.length > 0
-              ? normalizedParts.reduce((sum, p) => sum + p.quantity, 0)
-              : detail.partsCount,
-          fileType,
-          fileSizeBytes: totalFileSize,
-          contentHash,
-          minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
-          minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
-          description: detail.description || null,
-          descriptionHtml: detail.descriptionHtml || null,
-          dateAdded: safeDate(detail.dateAdded),
-          authorProfileUrl: detail.authorProfileUrl || null,
-          tags: detail.tags.length > 0 ? detail.tags : null,
+    const instructionResult = await db
+      .insert(instructionsTable)
+      .values({
+        mocNumber,
+        title: detail.title,
+        author: detail.author,
+        rebrickableUrl: mocUrl,
+        downloadUrl: mocUrl,
+        partsCount:
+          normalizedParts.length > 0
+            ? normalizedParts.reduce((sum, p) => sum + p.quantity, 0)
+            : detail.partsCount,
+        ...(fileType ? { fileType } : {}),
+        ...(totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
+        ...(contentHash ? { contentHash } : {}),
+        ...(fileName
+          ? {
+              minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
+              minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
+            }
+          : {}),
+        description: detail.description || null,
+        descriptionHtml: detail.descriptionHtml || null,
+        dateAdded: safeDate(detail.dateAdded),
+        authorProfileUrl: detail.authorProfileUrl || null,
+        tags: detail.tags.length > 0 ? detail.tags : null,
+        scrapeRunId,
+      })
+      .onConflictDoUpdate({
+        target: instructionsTable.mocNumber,
+        set: {
+          // Fill-gaps-only: only update fields when existing DB value is null/empty
+          ...(detail.title && !existingInstr?.title ? { title: detail.title } : {}),
+          ...(detail.author && !existingInstr?.author ? { author: detail.author } : {}),
+          ...(!existingInstr?.downloadUrl ? { downloadUrl: mocUrl } : {}),
+          ...(normalizedParts.length > 0 && !existingInstr?.partsCount
+            ? { partsCount: normalizedParts.reduce((sum, p) => sum + p.quantity, 0) }
+            : detail.partsCount != null && !existingInstr?.partsCount
+              ? { partsCount: detail.partsCount }
+              : {}),
+          ...(!hasExistingFiles && fileType ? { fileType } : {}),
+          ...(!hasExistingFiles && totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
+          ...(!hasExistingFiles && contentHash ? { contentHash } : {}),
+          ...(!hasExistingFiles && fileName
+            ? {
+                minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
+                minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
+              }
+            : {}),
+          ...(detail.description && !existingInstr?.description
+            ? { description: detail.description }
+            : {}),
+          ...(detail.descriptionHtml && !existingInstr?.descriptionHtml
+            ? { descriptionHtml: detail.descriptionHtml }
+            : {}),
+          ...(safeDate(detail.dateAdded) && !existingInstr?.dateAdded
+            ? { dateAdded: safeDate(detail.dateAdded) }
+            : {}),
+          ...(detail.authorProfileUrl && !existingInstr?.authorProfileUrl
+            ? { authorProfileUrl: detail.authorProfileUrl }
+            : {}),
+          ...(detail.tags.length > 0 &&
+          (!existingInstr?.tags || (existingInstr.tags as string[]).length === 0)
+            ? { tags: detail.tags }
+            : {}),
           scrapeRunId,
-        })
-        .onConflictDoUpdate({
-          target: instructionsTable.mocNumber,
-          set: {
-            ...(detail.title ? { title: detail.title } : {}),
-            ...(detail.author ? { author: detail.author } : {}),
-            downloadUrl: mocUrl,
-            ...(normalizedParts.length > 0
-              ? { partsCount: normalizedParts.reduce((sum, p) => sum + p.quantity, 0) }
-              : detail.partsCount != null
-                ? { partsCount: detail.partsCount }
-                : {}),
-            ...(fileType ? { fileType } : {}),
-            ...(totalFileSize ? { fileSizeBytes: totalFileSize } : {}),
-            ...(contentHash ? { contentHash } : {}),
-            minioKey: `mocs/MOC-${mocNumber}/${fileName}`,
-            minioUrl: `mocs/MOC-${mocNumber}/${fileName}`,
-            ...(detail.description ? { description: detail.description } : {}),
-            ...(detail.descriptionHtml ? { descriptionHtml: detail.descriptionHtml } : {}),
-            ...(safeDate(detail.dateAdded) ? { dateAdded: safeDate(detail.dateAdded) } : {}),
-            ...(detail.authorProfileUrl ? { authorProfileUrl: detail.authorProfileUrl } : {}),
-            ...(detail.tags.length > 0 ? { tags: detail.tags } : {}),
-            scrapeRunId,
-            updatedAt: new Date(),
-          },
-        })
-        .returning()
+          updatedAt: new Date(),
+        },
+      })
+      .returning()
 
-      const inst = instructionResult[0]
+    const inst = instructionResult[0]
 
-      if (normalizedParts.length > 0) {
-        for (const p of normalizedParts) {
-          const [part] = await db
-            .insert(partsTable)
-            .values({
-              partNumber: p.partNumber,
-              color: p.color,
+    if (normalizedParts.length > 0) {
+      for (const p of normalizedParts) {
+        const [part] = await db
+          .insert(partsTable)
+          .values({
+            partNumber: p.partNumber,
+            color: p.color,
+            name: p.name,
+            category: p.category,
+            imageUrl: p.imageUrl,
+          })
+          .onConflictDoUpdate({
+            target: [partsTable.partNumber, partsTable.color],
+            set: {
               name: p.name,
               category: p.category,
               imageUrl: p.imageUrl,
-            })
-            .onConflictDoUpdate({
-              target: [partsTable.partNumber, partsTable.color],
-              set: {
-                ...(p.name ? { name: p.name } : {}),
-                ...(p.category ? { category: p.category } : {}),
-                ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
-              },
-            })
-            .returning()
+            },
+          })
+          .returning()
 
-          await db
-            .insert(instructionPartsTable)
-            .values({
-              instructionId: inst.id,
-              partId: part.id,
-              quantity: p.quantity,
-              isSpare: p.isSpare ?? 0,
-            })
-            .onConflictDoUpdate({
-              target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
-              set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
-            })
-        }
-        logger.info(
-          `[single] MOC-${mocNumber}: linked ${normalizedParts.length} parts to instruction`,
-        )
+        await db
+          .insert(instructionPartsTable)
+          .values({
+            instructionId: inst.id,
+            partId: part.id,
+            quantity: p.quantity,
+            isSpare: p.isSpare ?? 0,
+          })
+          .onConflictDoUpdate({
+            target: [instructionPartsTable.instructionId, instructionPartsTable.partId],
+            set: { quantity: p.quantity, isSpare: p.isSpare ?? 0 },
+          })
       }
+      logger.info(
+        `[single] MOC-${mocNumber}: linked ${normalizedParts.length} parts to instruction`,
+      )
+    }
 
-      await steps.complete('db_upsert', { partsLinked: normalizedParts.length })
+    await steps.complete('db_upsert', { partsLinked: normalizedParts.length })
 
-      // Gallery sync
-      await steps.start('gallery_sync')
-      if (syncUserId) {
-        const galleryParts: GalleryPartData[] = normalizedParts.map(p => ({
-          partNumber: p.partNumber,
-          partName: p.name,
-          color: p.color,
-          quantity: p.quantity,
+    // ── Gallery sync ─────────────────────────────────────────────────
+    await steps.start('gallery_sync')
+    if (syncUserId) {
+      const galleryParts: GalleryPartData[] = normalizedParts.map(p => ({
+        partNumber: p.partNumber,
+        partName: p.name,
+        color: p.color,
+        quantity: p.quantity,
+      }))
+
+      const s3Key = fileName ? `mocs/MOC-${mocNumber}/${fileName}` : existingInstr?.minioKey || ''
+      const galleryFileType = fileType || existingInstr?.fileType || ''
+
+      // Build parts export file entries for gallery moc_files
+      const partsExportFiles = partsResult.exports
+        .filter(exp => exp.filePath)
+        .map(exp => ({
+          s3Key: `mocs/MOC-${mocNumber}/parts/${basename(exp.filePath!)}`,
+          filename: basename(exp.filePath!),
+          mimeType: exp.format === 'bricklink_xml' ? 'application/xml' : 'text/csv',
         }))
 
-        const galleryMocId = await writeToGallery(galleryDb as any, syncUserId, {
-          mocNumber,
-          title: detail.title,
-          author: detail.author,
-          description: detail.description || null,
-          descriptionHtml: detail.descriptionHtml || null,
-          dateAdded: safeDate(detail.dateAdded),
-          authorProfileUrl: detail.authorProfileUrl || null,
-          tags: detail.tags.length > 0 ? detail.tags : null,
-          partsCount: detail.partsCount,
-          rebrickableUrl: mocUrl,
-          s3Key: `mocs/MOC-${mocNumber}/${fileName}`,
-          fileType,
-          parts: galleryParts.length > 0 ? galleryParts : undefined,
-        })
+      const galleryMocId = await writeToGallery(galleryDb as any, syncUserId, {
+        mocNumber,
+        title: detail.title,
+        author: detail.author,
+        description: detail.description || null,
+        descriptionHtml: detail.descriptionHtml || null,
+        dateAdded: safeDate(detail.dateAdded),
+        authorProfileUrl: detail.authorProfileUrl || null,
+        tags: detail.tags.length > 0 ? detail.tags : null,
+        partsCount: detail.partsCount,
+        rebrickableUrl: mocUrl,
+        s3Key,
+        fileType: galleryFileType,
+        parts: galleryParts.length > 0 ? galleryParts : undefined,
+        partsExportFiles: partsExportFiles.length > 0 ? partsExportFiles : undefined,
+      })
 
-        if (galleryMocId && images.length > 0) {
-          for (const img of images) {
-            const imgFileName = basename(img.filePath)
-            await uploadImage(img.filePath, mocNumber, imgFileName, config.bucket)
-          }
-          const minioImages = await listImages(mocNumber, config.bucket)
-          if (minioImages.length > 0) {
-            const imageData = minioImages.map(key => ({
-              s3Key: key,
-              fileName: key.split('/').pop() || 'unknown',
-            }))
-            await writeImagesToGallery(galleryDb as any, galleryMocId, imageData)
-          }
+      if (galleryMocId && images.length > 0) {
+        for (const img of images) {
+          const imgFileName = basename(img.filePath)
+          await uploadImage(img.filePath, mocNumber, imgFileName, config.bucket)
+        }
+        const minioImages = await listImages(mocNumber, config.bucket)
+        if (minioImages.length > 0) {
+          const imageData = minioImages.map(key => ({
+            s3Key: key,
+            fileName: key.split('/').pop() || 'unknown',
+          }))
+          await writeImagesToGallery(galleryDb as any, galleryMocId, imageData)
         }
       }
-
-      await steps.complete('gallery_sync')
-      await checkpoint.save(mocNumber, 'completed')
-
-      // Unlike the MOC if it's currently liked — removes it from the liked
-      // list so it won't be re-discovered in future liked-mocs runs.
-      await mocPage.unlikeMoc(mocNumber)
-    } else {
-      await steps.skip('upload_minio')
-      await steps.skip('db_upsert')
-      await steps.skip('gallery_sync')
-      logger.warn(`[single] No files downloaded for MOC-${mocNumber}`)
     }
+
+    await steps.complete('gallery_sync')
+    await checkpoint.save(mocNumber, 'completed')
+
+    // Unlike the MOC if it's currently liked — removes it from the liked
+    // list so it won't be re-discovered in future liked-mocs runs.
+    await mocPage.unlikeMoc(mocNumber)
 
     // Write source sets (MOC → LEGO set relationships) to main DB
     if (detail.sourceSets.length > 0 && !options.dryRun) {
@@ -583,6 +693,22 @@ export async function runSingle(
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
     logger.error(`[single] Failed MOC-${mocNumber}: ${errMsg}`)
+
+    // Mark the scrape run as failed so it doesn't stay stuck in 'running'
+    if (scrapeRunId) {
+      await db
+        .update(scrapeRuns)
+        .set({
+          status: 'failed',
+          completedAt: new Date(),
+          errors: [{ mocNumber, error: errMsg }],
+        })
+        .where(eq(scrapeRuns.id, scrapeRunId))
+        .catch(e =>
+          logger.error(`[single] Failed to update scrape run status`, { error: String(e) }),
+        )
+    }
+
     throw error
   } finally {
     if (context) await saveSession(context).catch(() => {})
@@ -1345,9 +1471,9 @@ export async function runPipeline(
                   .onConflictDoUpdate({
                     target: [partsTable.partNumber, partsTable.color],
                     set: {
-                      ...(p.name ? { name: p.name } : {}),
-                      ...(p.category ? { category: p.category } : {}),
-                      ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
+                      name: p.name,
+                      category: p.category,
+                      imageUrl: p.imageUrl,
                     },
                   })
                   .returning()
@@ -1393,6 +1519,7 @@ export async function runPipeline(
                 s3Key: `mocs/MOC-${item.mocNumber}/${fileName}`,
                 fileType: fileType,
                 parts: galleryParts.length > 0 ? galleryParts : undefined,
+                // Note: partsExportFiles added in a second pass after scrapePartsFromInventory
               })
 
               // Upload scraped images to MinIO and write to gallery DB
@@ -1472,9 +1599,9 @@ export async function runPipeline(
                   .onConflictDoUpdate({
                     target: [partsTable.partNumber, partsTable.color],
                     set: {
-                      ...(p.name ? { name: p.name } : {}),
-                      ...(p.category ? { category: p.category } : {}),
-                      ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
+                      name: p.name,
+                      category: p.category,
+                      imageUrl: p.imageUrl,
                     },
                   })
                   .returning()
@@ -1500,9 +1627,47 @@ export async function runPipeline(
         }
         if (partsResult.exports.length > 0) {
           const saved = partsResult.exports.filter(e => e.filePath)
+          for (const exp of saved) {
+            const expFileName = basename(exp.filePath!)
+            await uploadPartsExport(exp.filePath!, item.mocNumber, expFileName, config.bucket)
+          }
           logger.info(
-            `[pipeline] MOC-${item.mocNumber}: saved ${saved.length} export files: ${saved.map(e => e.label).join(', ')}`,
+            `[pipeline] MOC-${item.mocNumber}: uploaded ${saved.length} export files: ${saved.map(e => e.label).join(', ')}`,
           )
+
+          // Write parts export files as moc_files entries in gallery DB
+          if (syncUserId && saved.length > 0) {
+            const galleryMoc = await findGalleryMoc(galleryDb as any, item.mocNumber)
+            if (galleryMoc) {
+              const partsExportFiles = saved.map(exp => ({
+                s3Key: `mocs/MOC-${item.mocNumber}/parts/${basename(exp.filePath!)}`,
+                filename: basename(exp.filePath!),
+                mimeType: exp.format === 'bricklink_xml' ? 'application/xml' : 'text/csv',
+              }))
+              for (const pf of partsExportFiles) {
+                await (galleryDb as any)
+                  .insert(gallerySchema.mocFiles)
+                  .values({
+                    mocId: galleryMoc.id,
+                    fileType: 'parts-list',
+                    s3Key: pf.s3Key,
+                    originalFilename: pf.filename,
+                    mimeType: pf.mimeType,
+                  })
+                  .onConflictDoUpdate({
+                    target: [gallerySchema.mocFiles.mocId, gallerySchema.mocFiles.originalFilename],
+                    set: {
+                      s3Key: pf.s3Key,
+                      mimeType: pf.mimeType,
+                      updatedAt: new Date(),
+                    },
+                  })
+              }
+              logger.info(
+                `[pipeline] MOC-${item.mocNumber}: wrote ${partsExportFiles.length} parts-list file(s) to gallery`,
+              )
+            }
+          }
         }
 
         await waitBetweenInstructions()

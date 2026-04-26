@@ -31,6 +31,7 @@ const QUEUE_NAMES = {
   'bricklink-minifig': 'scrape-bricklink-minifig',
   'bricklink-catalog': 'scrape-bricklink-catalog',
   'bricklink-prices': 'scrape-bricklink-prices',
+  'bricklink-moc-single': 'scrape-bricklink-moc-single',
   'lego-set': 'scrape-lego-set',
   'rebrickable-set': 'scrape-rebrickable-set',
   'rebrickable-mocs': 'scrape-rebrickable-mocs',
@@ -119,19 +120,21 @@ const previousCounts = new Map<string, { completed: number; failed: number }>()
 // Helper: map BullMQ job to response shape
 // ─────────────────────────────────────────────────────────────────────────
 
-function mapJob(job: any, queueName: string): JobResponse {
+async function mapJob(job: any, queueName: string, knownState?: string): Promise<JobResponse> {
   // Derive type from queue name (e.g., "scrape-bricklink-minifig" → "bricklink-minifig")
   const type = queueName.replace('scrape-', '')
+  // Use BullMQ's actual state rather than inferring from job properties.
+  // After retry(), failedReason is cleared but property-based inference was
+  // unreliable — the authoritative state comes from which Redis set the job is in.
+  const status = knownState ?? (await job.getState())
+  // Normalize delayed/prioritized/waiting-children to 'waiting' for the frontend
+  const normalizedStatus = ['delayed', 'prioritized', 'waiting-children'].includes(status)
+    ? 'waiting'
+    : status
   return {
     id: job.id,
     type,
-    status: job.failedReason
-      ? 'failed'
-      : job.finishedOn
-        ? 'completed'
-        : job.processedOn
-          ? 'active'
-          : 'waiting',
+    status: normalizedStatus as JobResponse['status'],
     data: job.data,
     progress: job.progress,
     attemptsMade: job.attemptsMade ?? 0,
@@ -215,6 +218,39 @@ scraper.post('/jobs', async c => {
     case 'rebrickable-set':
       jobData = { url: input.url, wishlist: input.wishlist }
       break
+    case 'bricklink-moc-single': {
+      // Extract idModel from URL
+      const blModelMatch = input.url.match(/idModel=(\d+)/i)
+      const blUrl = blModelMatch
+        ? `https://www.bricklink.com/v3/studio/design.page?idModel=${blModelMatch[1]}`
+        : input.url
+      jobData = { url: blUrl }
+
+      // Cancel-and-requeue: remove any existing pending/active job for this URL
+      const blExistingJobs = await queue.getJobs(['waiting', 'active', 'delayed'], 0, 500)
+      for (const existing of blExistingJobs) {
+        if (existing.data?.url === blUrl) {
+          try {
+            const state = await existing.getState()
+            if (state === 'active') {
+              await existing.moveToFailed(new Error('Replaced by new scrape request'), '0')
+            }
+            await existing.remove()
+          } catch {
+            await existing.discard().catch(() => {})
+            await existing
+              .moveToFailed(new Error('Replaced by new scrape request'), '0')
+              .catch(() => {})
+            await existing.remove().catch(() => {})
+          }
+          logger.info('Removed existing BrickLink MOC job before requeue', undefined, {
+            removedJobId: existing.id,
+            url: blUrl,
+          })
+        }
+      }
+      break
+    }
     case 'rebrickable-mocs':
       jobData = {
         resume: input.resume ?? false,
@@ -224,6 +260,37 @@ scraper.post('/jobs', async c => {
         likedMocs: input.likedMocs ?? false,
       }
       break
+    case 'rebrickable-moc-single': {
+      // Extract MOC number from URL or use raw input
+      const mocMatch = input.url.match(/MOC-(\d+)/i)
+      const mocNumber = mocMatch ? `MOC-${mocMatch[1]}` : input.url
+      jobData = { mocNumber, force: false, retryMissing: false }
+
+      // Cancel-and-requeue: remove any existing pending/active job for this MOC
+      const existingJobs = await queue.getJobs(['waiting', 'active', 'delayed'], 0, 500)
+      for (const existing of existingJobs) {
+        if (existing.data?.mocNumber === mocNumber) {
+          try {
+            const state = await existing.getState()
+            if (state === 'active') {
+              await existing.moveToFailed(new Error('Replaced by new scrape request'), '0')
+            }
+            await existing.remove()
+          } catch {
+            await existing.discard().catch(() => {})
+            await existing
+              .moveToFailed(new Error('Replaced by new scrape request'), '0')
+              .catch(() => {})
+            await existing.remove().catch(() => {})
+          }
+          logger.info('Removed existing job for MOC before requeue', undefined, {
+            removedJobId: existing.id,
+            mocNumber,
+          })
+        }
+      }
+      break
+    }
   }
 
   const job = await queue.add('scrape', jobData)
@@ -276,19 +343,21 @@ scraper.get('/jobs', async c => {
 
     if (status) {
       const jobs = await queue.getJobs([status] as any[], 0, fetchLimit)
-      allJobs.push(...jobs.map(j => mapJob(j, queueName)))
+      const mapped = await Promise.all(jobs.map(j => mapJob(j, queueName, status)))
+      allJobs.push(...mapped)
     } else {
       // Fetch each status separately so active/failed aren't drowned out
-      const statusGroups: Array<{ statuses: string[] }> = [
-        { statuses: ['active'] },
-        { statuses: ['failed'] },
-        { statuses: ['waiting', 'delayed'] },
-        { statuses: ['completed'] },
+      const statusGroups: Array<{ statuses: string[]; state: string }> = [
+        { statuses: ['active'], state: 'active' },
+        { statuses: ['failed'], state: 'failed' },
+        { statuses: ['waiting', 'delayed'], state: 'waiting' },
+        { statuses: ['completed'], state: 'completed' },
       ]
 
-      for (const { statuses: s } of statusGroups) {
+      for (const { statuses: s, state } of statusGroups) {
         const jobs = await queue.getJobs(s as any[], 0, fetchLimit)
-        allJobs.push(...jobs.map(j => mapJob(j, queueName)))
+        const mapped = await Promise.all(jobs.map(j => mapJob(j, queueName, state)))
+        allJobs.push(...mapped)
       }
     }
   }
@@ -312,7 +381,7 @@ scraper.get('/jobs/:id', async c => {
     const job = await queue.getJob(jobId)
     if (job) {
       // Find children if this is a catalog or MOC discovery job
-      const children: JobResponse[] = []
+      const childPromises: Promise<JobResponse>[] = []
       if (queueName === QUEUE_NAMES['bricklink-catalog']) {
         const minifigQueue = getQueue(QUEUE_NAMES['bricklink-minifig'])
         const allMinifigJobs = await minifigQueue.getJobs(
@@ -322,7 +391,7 @@ scraper.get('/jobs/:id', async c => {
         )
         for (const childJob of allMinifigJobs) {
           if (childJob.data?.parentJobId === jobId) {
-            children.push(mapJob(childJob, QUEUE_NAMES['bricklink-minifig']))
+            childPromises.push(mapJob(childJob, QUEUE_NAMES['bricklink-minifig']))
           }
         }
       } else if (queueName === QUEUE_NAMES['rebrickable-mocs']) {
@@ -334,13 +403,18 @@ scraper.get('/jobs/:id', async c => {
         )
         for (const childJob of allSingleJobs) {
           if (childJob.data?.parentJobId === jobId) {
-            children.push(mapJob(childJob, QUEUE_NAMES['rebrickable-moc-single']))
+            childPromises.push(mapJob(childJob, QUEUE_NAMES['rebrickable-moc-single']))
           }
         }
       }
 
+      const [mapped, children] = await Promise.all([
+        mapJob(job, queueName),
+        Promise.all(childPromises),
+      ])
+
       return c.json({
-        ...mapJob(job, queueName),
+        ...mapped,
         children: children.length > 0 ? children : undefined,
       })
     }
@@ -432,8 +506,36 @@ scraper.post('/jobs/:id/retry', async c => {
     const queue = getQueue(queueName)
     const job = await queue.getJob(jobId)
     if (job) {
+      const state = await job.getState()
       const type = queueName.replace('scrape-', '')
-      await job.retry()
+
+      if (state === 'waiting' || state === 'delayed') {
+        // Job is already queued (e.g. stale failedReason from a previous run
+        // after removeOnFail evicted it from the failed set). Nothing to do.
+        logger.info('Scrape job retry skipped — already waiting', undefined, {
+          jobId,
+          queueName,
+          state,
+        })
+        return c.json({ success: true, status: 'waiting' })
+      }
+
+      if (state !== 'failed') {
+        return c.json(
+          {
+            error: 'INVALID_STATE',
+            message: `Job is ${state}, only failed or waiting jobs can be retried`,
+          },
+          409,
+        )
+      }
+
+      try {
+        await job.retry('failed')
+      } catch (err: any) {
+        logger.error('Failed to retry scrape job', err, { jobId, queueName, state })
+        return c.json({ error: 'RETRY_FAILED', message: err?.message ?? 'Unknown error' }, 500)
+      }
       scraperJobsRetried.inc({ scraper_type: type })
       logger.info('Scrape job retried', undefined, { jobId, queueName })
       return c.json({ success: true, status: 'waiting' })

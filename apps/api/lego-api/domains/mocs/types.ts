@@ -195,6 +195,8 @@ export const MocStatsSchema = z.object({
 export const GetMocResponseSchema = z.object({
   id: z.string().uuid(),
   userId: z.string(),
+  mocId: z.string().nullable(),
+  source: z.string().nullable(),
   title: z.string(),
   description: z.string().nullable(),
   theme: z.string().nullable(),

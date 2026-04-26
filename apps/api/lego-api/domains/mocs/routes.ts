@@ -589,6 +589,8 @@ mocs.get('/:id', async c => {
     const response = {
       id: moc.id,
       userId: moc.userId,
+      mocId: moc.mocId ?? null,
+      source: moc.source ?? 'rebrickable',
       title: moc.title,
       description: moc.description,
       theme: moc.theme,

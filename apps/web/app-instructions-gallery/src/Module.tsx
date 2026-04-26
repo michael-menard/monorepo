@@ -7,6 +7,7 @@
  */
 import { Routes, Route } from 'react-router-dom'
 import { ModuleLayout } from './components/module-layout'
+import { GalleryStateProvider } from './context/GalleryStateContext'
 import { MainPage } from './pages/main-page'
 import { CreateMocPage } from './pages/CreateMocPage'
 import { MocDetailModule } from './pages/MocDetailModule'
@@ -16,15 +17,19 @@ import { MocDetailModule } from './pages/MocDetailModule'
  *
  * This is the main export that the shell app will lazy-load.
  * Routing is handled internally via React Router relative paths.
+ * GalleryStateProvider persists list data across route transitions
+ * so navigating back from a detail page restores position instantly.
  */
 export function InstructionsModule() {
   return (
     <ModuleLayout>
-      <Routes>
-        <Route index element={<MainPage />} />
-        <Route path="new" element={<CreateMocPage />} />
-        <Route path=":idOrSlug" element={<MocDetailModule />} />
-      </Routes>
+      <GalleryStateProvider>
+        <Routes>
+          <Route index element={<MainPage />} />
+          <Route path="new" element={<CreateMocPage />} />
+          <Route path=":idOrSlug" element={<MocDetailModule />} />
+        </Routes>
+      </GalleryStateProvider>
     </ModuleLayout>
   )
 }

@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
   'bricklink-minifig': 'Minifig',
   'bricklink-catalog': 'Catalog',
   'bricklink-prices': 'Prices',
+  'bricklink-moc-single': 'BL MOC',
   'lego-set': 'LEGO Set',
   'rebrickable-set': 'RB Set',
   'rebrickable-mocs': 'MOC Pipeline',
@@ -39,7 +40,7 @@ function formatTime(iso: string): string {
   if (diff < 60000) return 'just now'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return date.toLocaleDateString()
+  return date.toLocaleString()
 }
 
 function JobRow({ job }: { job: ScrapeJob }) {
@@ -126,7 +127,7 @@ function JobRow({ job }: { job: ScrapeJob }) {
       {/* Children */}
       {expanded && hasChildren && (
         <div className="ml-6 border-l border-border pl-2">
-          {job.children!.map(child => (
+          {job.children!.map((child: ScrapeJob) => (
             <JobRow key={child.id} job={child} />
           ))}
         </div>

@@ -412,6 +412,8 @@ export type MocStats = z.infer<typeof MocStatsSchema>
 export const GetMocDetailResponseSchema = z.object({
   id: lenientUuid,
   userId: z.string(),
+  mocId: z.string().nullable(),
+  source: z.string().nullable().optional(),
   title: z.string(),
   description: z.string().nullable(),
   theme: z.string().nullable(),

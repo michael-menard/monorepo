@@ -10,6 +10,7 @@ import {
   PersonStanding,
   Lightbulb,
   ShoppingCart,
+  RefreshCw,
 } from 'lucide-react'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
@@ -31,6 +32,7 @@ const mainNavItems = [
   { id: 'minifigs', label: 'Minifigs', href: '/minifigs', icon: PersonStanding },
   { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
   { id: 'procurement', label: 'Build Planner', href: '/procurement', icon: ShoppingCart },
+  { id: 'scraper-queue', label: 'Scrape Queue', href: '/scraper-queue', icon: RefreshCw },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────

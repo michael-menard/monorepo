@@ -140,6 +140,14 @@ export const handlers = [
     })
   }),
 
+  // Scraper job endpoint (for ScrapeButton)
+  http.post('*/scraper/jobs', () =>
+    HttpResponse.json(
+      { id: 'job-123', type: 'rebrickable-moc-single', status: 'waiting', data: {} },
+      { status: 201 },
+    ),
+  ),
+
   // Error simulation endpoints
   http.get(`${API_BASE_URL}/api/error/500`, () => {
     return HttpResponse.json(

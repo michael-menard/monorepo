@@ -34,6 +34,8 @@ export interface GalleryMocData {
   fileType: string
   /** Parts to sync (optional — not all scraper modes produce parts) */
   parts?: GalleryPartData[]
+  /** Parts export files uploaded to MinIO (CSV, XML) — creates moc_files rows with fileType 'parts-list' */
+  partsExportFiles?: Array<{ s3Key: string; filename: string; mimeType: string }>
 }
 
 export interface GalleryPartData {
@@ -140,12 +142,38 @@ export async function writeToGallery(
         },
       })
 
-    // 3. Sync parts (if provided)
+    // 3. Upsert parts export files (CSV, XML) as moc_files with fileType 'parts-list'
+    if (data.partsExportFiles && data.partsExportFiles.length > 0) {
+      for (const pf of data.partsExportFiles) {
+        await galleryDb
+          .insert(gallerySchema.mocFiles)
+          .values({
+            mocId: galleryMocId,
+            fileType: 'parts-list',
+            s3Key: pf.s3Key,
+            originalFilename: pf.filename,
+            mimeType: pf.mimeType,
+          })
+          .onConflictDoUpdate({
+            target: [gallerySchema.mocFiles.mocId, gallerySchema.mocFiles.originalFilename],
+            set: {
+              s3Key: pf.s3Key,
+              mimeType: pf.mimeType,
+              updatedAt: new Date(),
+            },
+          })
+      }
+      logger.info(
+        `[gallery] MOC-${data.mocNumber}: wrote ${data.partsExportFiles.length} parts-list file(s)`,
+      )
+    }
+
+    // 4. Sync parts (if provided)
     if (data.parts && data.parts.length > 0) {
       await syncParts(galleryDb, galleryMocId, data.parts)
     }
 
-    // 4. Update total piece count
+    // 5. Update total piece count
     const totalPieces = data.parts?.reduce((sum, p) => sum + p.quantity, 0) ?? 0
     if (totalPieces > 0) {
       await galleryDb

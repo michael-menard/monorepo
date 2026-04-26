@@ -21,6 +21,8 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
 
   return {
     id: apiData.id,
+    mocNumber: apiData.mocId ?? null,
+    source: apiData.source ?? 'rebrickable',
     title: apiData.title,
     description: apiData.description || undefined,
     tags: apiData.tags || [],
@@ -55,6 +57,9 @@ function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
     dimensions: (apiData as any).dimensions ?? null,
     ratings: (apiData as any).ratings ?? null,
     notes: (apiData as any).notes ?? null,
+    buildStatus: apiData.buildStatus,
+    reviewStatus: apiData.reviewStatus,
+    reviewSkippedAt: apiData.reviewSkippedAt ?? null,
   }
 }
 
