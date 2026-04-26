@@ -1,39 +1,34 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "ollama/qwen2.5-coder:14b",
+  "model": "ollama/deepseek-v4-flash:cloud",
   "provider": {
-    "minimax": {
-      "models": {
-        "MiniMax-M2.5": {
-          "name": "MiniMax M2.5 (Escalation)"
-        }
-      }
-    },
-    "openrouter": {
-      "models": {
-        "qwen/qwen-3-235b-a22b": {
-          "name": "Qwen 3 235B (Escalation)"
-        },
-        "deepseek/deepseek-r1": {
-          "name": "DeepSeek R1 (Escalation)"
-        }
-      }
-    },
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Ollama (local)",
+      "name": "Ollama",
       "options": {
         "baseURL": "http://localhost:11434/v1"
       },
       "models": {
+        "deepseek-v4-flash:cloud": {
+          "name": "DeepSeek V4 Flash (Cloud)"
+        },
+        "kimi-k2.6:cloud": {
+          "name": "Kimi K2.6 (Cloud)"
+        },
+        "glm-5.1:cloud": {
+          "name": "GLM 5.1 (Cloud)"
+        },
+        "qwen3.5:cloud": {
+          "name": "Qwen 3.5 (Cloud)"
+        },
+        "minimax-m2.7:cloud": {
+          "name": "MiniMax M2.7 (Cloud)"
+        },
         "qwen2.5-coder:14b": {
-          "name": "Qwen 2.5 Coder 14B"
+          "name": "Qwen 2.5 Coder 14B (Local)"
         },
         "qwen2.5-coder:7b": {
-          "name": "Qwen 2.5 Coder 7B"
-        },
-        "llama3.2": {
-          "name": "Llama 3.2"
+          "name": "Qwen 2.5 Coder 7B (Local)"
         }
       }
     }
@@ -52,80 +47,6 @@
       "type": "local",
       "command": ["npx", "-y", "@upstash/context7-mcp@latest"],
       "enabled": true
-    }
-  },
-  "agent": {
-    "dev-implement-backend-coder": {
-      "description": "Implement backend portions of a story",
-      "mode": "subagent",
-      "model": "ollama/qwen2.5-coder:14b",
-      "tools": {
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "knowledge-base": true
-      }
-    },
-    "dev-implement-frontend-coder": {
-      "description": "Implement frontend portions of a story",
-      "mode": "subagent",
-      "model": "ollama/qwen2.5-coder:14b",
-      "tools": {
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "knowledge-base": true
-      }
-    },
-    "dev-implement-verifier": {
-      "description": "Run build, type check, lint, and tests",
-      "mode": "subagent",
-      "model": "ollama/qwen2.5-coder:7b",
-      "tools": {
-        "bash": true
-      }
-    },
-    "dev-implement-playwright": {
-      "description": "Run Playwright E2E tests",
-      "mode": "subagent",
-      "model": "ollama/qwen2.5-coder:7b",
-      "tools": {
-        "bash": true
-      }
-    },
-    "code-review-lint": {
-      "description": "Run ESLint on touched files",
-      "mode": "subagent",
-      "model": "ollama/llama3.2",
-      "tools": {
-        "bash": true
-      }
-    },
-    "code-review-typecheck": {
-      "description": "Run TypeScript type checking",
-      "mode": "subagent",
-      "model": "ollama/llama3.2",
-      "tools": {
-        "bash": true
-      }
-    },
-    "code-review-build": {
-      "description": "Verify production build succeeds",
-      "mode": "subagent",
-      "model": "ollama/llama3.2",
-      "tools": {
-        "bash": true
-      }
-    },
-    "elab-analyst": {
-      "description": "Perform 8-point audit and discovery analysis",
-      "mode": "subagent",
-      "model": "ollama/qwen2.5-coder:14b",
-      "tools": {
-        "write": true,
-        "read": true,
-        "knowledge-base": true
-      }
     }
   },
   "tools": {
